@@ -1,0 +1,54 @@
+{
+  "version": "2026-09-27",
+  "policy": {
+    "passport_profile": "TR_BORDO",
+    "schengen_available": false,
+    "allow_self_transfer": false,
+    "preferred_origins": ["ESB", "IST", "SAW"],
+    "currency": "TRY"
+  },
+  "quality_levels": {
+    "A": "Canlı fiyat + canlı müsaitlik/koltuk + satın alma yönlendirmesi",
+    "B": "Canlı sefer + fiyat, müsaitlik sınırlı veya partner erişimi gerekli",
+    "C": "Resmi güncel tarife + yaklaşık/sabit fiyat",
+    "D": "Yalnız yönlendirme veya araştırma sinyali"
+  },
+  "sources": [
+    {"id":"searchapi_google_flights","modes":["flight"],"regions":["global"],"access":"paid_api","quality":"A","priority":1,"use":"Esnek tarih keşfi, uçuş detayı, fiyat doğrulama, booking aktarımı","production_note":"Mevcut canlı uçuş omurgası; anahtar yalnız sunucuda."},
+    {"id":"google_flights_deals","modes":["flight"],"regions":["global"],"access":"provider_structured_data","quality":"B","priority":2,"use":"ESB/IST/SAW dünya fırsatı keşfi","production_note":"Sonuç satın alma öncesi yeniden doğrulanmalı."},
+    {"id":"12go","modes":["train","bus","ferry","van","flight","transfer"],"regions":["asia","central_asia","selected_global"],"access":"partner_api","quality":"A","priority":2,"use":"Çok modlu omurga ve tek biletli bağlantılar","production_note":"Partner/API erişimi onay gerektirebilir."},
+    {"id":"busbud","modes":["bus","train"],"regions":["global"],"access":"commercial_api","quality":"A","priority":3,"use":"Şehirler arası otobüs/tren fiyat ve müsaitlik","production_note":"Ticari entegrasyon adayı."},
+    {"id":"sherpa","modes":["visa"],"regions":["global"],"access":"commercial_api","quality":"A","priority":1,"use":"Pasaport, vize ve giriş şartları","production_note":"TR bordo + Schengen yok profilini doğrulamak için."},
+    {"id":"iata_timatic","modes":["visa"],"regions":["global"],"access":"commercial_api","quality":"A","priority":1,"use":"Transit/giriş belgesi doğrulaması","production_note":"Havayolu düzeyinde güçlü referans; lisanslı erişim gerekir."},
+
+    {"id":"oncf","modes":["train","high_speed_train"],"regions":["morocco"],"access":"official_booking","quality":"A","priority":1,"use":"Tanca-Rabat-Casablanca-Marrakech trenleri","production_note":"Fas uzun rota omurgası."},
+    {"id":"ctm","modes":["bus"],"regions":["morocco"],"access":"official_booking","quality":"A","priority":1,"use":"Fas şehirler arası otobüs, saat/fiyat/doluluk","production_note":"Agadir, Essaouira ve tren dışı etaplar."},
+    {"id":"supratours","modes":["bus"],"regions":["morocco"],"access":"official_booking","quality":"B","priority":1,"use":"ONCF ağı dışındaki Fas bağlantıları","production_note":"Tren + otobüs zincirlerinde güçlü."},
+
+    {"id":"willer","modes":["night_bus","bus"],"regions":["japan"],"access":"official_booking","quality":"A","priority":1,"use":"Tokyo-Kyoto-Osaka vb. gece otobüsleri","production_note":"Otel gecesi tasarrufu hesabına kat."},
+    {"id":"smartex","modes":["high_speed_train"],"regions":["japan"],"access":"official_booking","quality":"A","priority":1,"use":"Shinkansen ve erken rezervasyon tarifeleri","production_note":"Standart fiyat yerine uygun erken ürünleri de tara."},
+    {"id":"jr_pass","modes":["rail_pass"],"regions":["japan"],"access":"official_static_pricing","quality":"C","priority":2,"use":"Pass vs tek bilet toplamı karşılaştırması","production_note":"Pass otomatik önerilmez; ancak net tasarruf varsa gösterilir."},
+    {"id":"mol_sunflower","modes":["night_ferry","ferry"],"regions":["japan"],"access":"official_booking","quality":"A","priority":1,"use":"Osaka-Kyushu gece feribotları","production_note":"Ulaşım + konaklama değerini birlikte hesapla."},
+    {"id":"japan_low_cost_air","modes":["domestic_flight"],"regions":["japan"],"access":"airline_or_flight_provider","quality":"A","priority":2,"use":"Tren/otobüs/feribota karşı iç hat düşük maliyetli uçuş","production_note":"Bagaj ve havaalanı erişimi true-cost hesabında zorunlu."},
+
+    {"id":"uzbekistan_railways","modes":["train","high_speed_train","night_train"],"regions":["uzbekistan"],"access":"official_booking","quality":"A","priority":1,"use":"Taşkent-Semerkant-Buhara-Hive zinciri","production_note":"Resmi bilet sistemi ana kaynak."},
+    {"id":"ktz","modes":["train","night_train"],"regions":["kazakhstan"],"access":"official_booking","quality":"A","priority":1,"use":"Astana-Almatı-Çimkent","production_note":"Uzun etaplarda gece treni avantajını ölç."},
+    {"id":"tre_ge","modes":["train","bus"],"regions":["georgia"],"access":"booking_platform","quality":"A","priority":1,"use":"Tiflis-Batum-Kutaisi ve Gürcistan içi ulaşım","production_note":"Bilet/sefer doğrulaması için."},
+    {"id":"georgian_railway","modes":["train","night_train"],"regions":["georgia","armenia"],"access":"official_schedule_booking","quality":"A","priority":1,"use":"Tiflis-Erivan ve bölgesel trenler","production_note":"Gece treni otel tasarrufu sağlayabilir."},
+    {"id":"armenia_railway","modes":["train","night_train"],"regions":["armenia","georgia"],"access":"official_booking","quality":"A","priority":1,"use":"Erivan-Gümrü-Tiflis/Batum","production_note":"Open-jaw Kafkasya zincirleri için."},
+
+    {"id":"gjirafa_travel","modes":["bus"],"regions":["albania","kosovo","balkans"],"access":"affiliate_or_oauth_api","quality":"A","priority":1,"use":"Tiran-Berat, Priştine-Prizren ve bölgesel otobüs","production_note":"API/affiliate erişimi tercih; scraping son çare."},
+    {"id":"busticket4me","modes":["bus"],"regions":["montenegro","north_macedonia","balkans"],"access":"booking_website","quality":"B","priority":1,"use":"Kotor-Budva, Üsküp-Ohri ve Balkan otobüsleri","production_note":"Saat/fiyat/koltuk verisi için."},
+    {"id":"zfbh","modes":["train"],"regions":["bosnia_herzegovina"],"access":"official_schedule","quality":"C","priority":1,"use":"Saraybosna-Mostar tren tarifesi","production_note":"Canlı satış sorunluysa tarife + resmi link göster."},
+
+    {"id":"srt_dticket","modes":["train","night_train"],"regions":["thailand"],"access":"official_booking","quality":"A","priority":1,"use":"Bangkok-Chiang Mai ve güneye gece trenleri","production_note":"Yataklı/gece seferlerini ayrı sınıfla."},
+    {"id":"lomprayah","modes":["bus_ferry_combo","ferry","bus"],"regions":["thailand"],"access":"official_booking","quality":"A","priority":1,"use":"Bangkok-adalar kombine biletleri","production_note":"Tek biletli transfer olduğu için self-transfer sayılmaz."},
+    {"id":"vietnam_railways","modes":["train","night_train"],"regions":["vietnam"],"access":"official_booking","quality":"A","priority":1,"use":"Hanoi-Hue-Da Nang-HCMC demiryolu","production_note":"Sleeper seçeneklerini ayrıca işaretle."},
+    {"id":"vexere","modes":["bus","sleeper_bus","train","flight"],"regions":["vietnam","southeast_asia"],"access":"booking_platform","quality":"A","priority":1,"use":"Vietnam otobüs/sleeper karşılaştırması","production_note":"Uzun etaplarda otel gecesi tasarrufu hesabına kat."},
+    {"id":"royal_railway_cambodia","modes":["train"],"regions":["cambodia"],"access":"official_schedule_booking","quality":"B","priority":2,"use":"Phnom Penh-Kampot-Kep-Sihanoukville","production_note":"Düşük maliyetli bölgesel zincir."},
+
+    {"id":"ferryos","modes":["ferry"],"regions":["turkey_greece"],"access":"api_partner","quality":"A","priority":4,"use":"Türkiye-Yunanistan feribotları","production_note":"Mevcut kullanıcı profilinde Schengen giriş gerektiği için sonuçlar gizlenir.","requires_schengen_entry":true},
+    {"id":"ferryhopper","modes":["ferry"],"regions":["europe_mediterranean"],"access":"mcp_or_partner","quality":"A","priority":4,"use":"Geniş feribot ağı","production_note":"Schengen girişli hatlar kullanıcı profilinde filtrelenir."},
+    {"id":"direct_ferries","modes":["ferry"],"regions":["global"],"access":"partner_api","quality":"A","priority":4,"use":"Geniş feribot meta-arama","production_note":"Partner onayı; vize filtresi sonucu belirler."}
+  ]
+}

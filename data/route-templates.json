@@ -1,0 +1,105 @@
+{
+  "version": "2026-09-28",
+  "templates": [
+    {
+      "id": "morocco_atlantic",
+      "label": "Fas Atlantik rotası",
+      "codes": ["CMN", "RAK", "FEZ", "RBA", "AGA"],
+      "days": [8, 14],
+      "entry": "CMN",
+      "exit": "AGA",
+      "entry_candidates": ["CMN"],
+      "exit_candidates": ["AGA"],
+      "startCity": "Kazablanka",
+      "endCity": "Agadir",
+      "cities": ["Marakeş", "Essaouira"],
+      "stops": ["Kazablanka", "Marakeş", "Essaouira", "Agadir"],
+      "preferred_modes": ["high_speed_train", "train", "bus"],
+      "open_jaw": true,
+      "visaStatus": "ok",
+      "entryTransfer": {"from":"CMN","to":"Kazablanka","label":"CMN → Kazablanka","mode":"train","fareTry":220,"durationMinutes":45,"dataQuality":"C","sourceName":"ONCF","priceLabel":"Resmî tarife / yaklaşık","bookingUrl":"https://www.oncf-voyages.ma/"},
+      "exitTransfer": {"from":"Agadir","to":"AGA","label":"Agadir → AGA","mode":"bus","fareTry":180,"durationMinutes":45,"dataQuality":"C","sourceName":"Alsa Agadir","priceLabel":"Yaklaşık","bookingUrl":"https://www.alsa.ma/"},
+      "edges": [
+        {"from":"Kazablanka","to":"Marakeş","label":"Kazablanka → Marakeş","mode":"train","fareTry":620,"durationMinutes":165,"dataQuality":"C","sourceName":"ONCF","priceLabel":"Resmî tarife / yaklaşık","bookingUrl":"https://www.oncf-voyages.ma/"},
+        {"from":"Kazablanka","to":"Essaouira","label":"Kazablanka → Essaouira","mode":"bus","fareTry":570,"durationMinutes":300,"dataQuality":"C","sourceName":"CTM","priceLabel":"Yaklaşık","bookingUrl":"https://ctm.ma/"},
+        {"from":"Marakeş","to":"Essaouira","label":"Marakeş → Essaouira","mode":"bus","fareTry":440,"durationMinutes":180,"dataQuality":"C","sourceName":"Supratours","priceLabel":"Resmî tarife / yaklaşık","bookingUrl":"https://www.supratours.ma/"},
+        {"from":"Marakeş","to":"Agadir","label":"Marakeş → Agadir","mode":"bus","fareTry":520,"durationMinutes":210,"dataQuality":"C","sourceName":"CTM","priceLabel":"Yaklaşık","bookingUrl":"https://ctm.ma/"},
+        {"from":"Essaouira","to":"Marakeş","label":"Essaouira → Marakeş","mode":"bus","fareTry":440,"durationMinutes":180,"dataQuality":"C","sourceName":"Supratours","priceLabel":"Yaklaşık","bookingUrl":"https://www.supratours.ma/"},
+        {"from":"Essaouira","to":"Agadir","label":"Essaouira → Agadir","mode":"bus","fareTry":420,"durationMinutes":190,"dataQuality":"C","sourceName":"CTM","priceLabel":"Yaklaşık","bookingUrl":"https://ctm.ma/"}
+      ],
+      "closedJawReturn": {"from":"Agadir","to":"Kazablanka","label":"Agadir → Kazablanka dönüşü","mode":"bus","fareTry":760,"durationMinutes":390,"dataQuality":"C","sourceName":"CTM","priceLabel":"Yaklaşık","bookingUrl":"https://ctm.ma/"}
+    },
+    {
+      "id": "japan_golden",
+      "label": "Japonya altın rota + Kyushu",
+      "codes": ["TYO", "KIX"],
+      "days": [9, 14],
+      "entry": "NRT",
+      "exit": "FUK",
+      "entry_candidates": ["NRT"],
+      "exit_candidates": ["FUK"],
+      "startCity": "Tokyo",
+      "endCity": "Fukuoka",
+      "cities": ["Kyoto", "Osaka", "Beppu"],
+      "stops": ["Tokyo", "Kyoto", "Osaka", "Beppu", "Fukuoka"],
+      "preferred_modes": ["high_speed_train", "night_bus", "night_ferry", "domestic_flight"],
+      "open_jaw": true,
+      "visaStatus": "ok",
+      "entryTransfer": {"from":"NRT","to":"Tokyo","label":"Narita → Tokyo","mode":"train","fareTry":650,"durationMinutes":70,"dataQuality":"C","sourceName":"JR East","priceLabel":"Resmî tarife / yaklaşık","bookingUrl":"https://www.jreast.co.jp/multi/en/"},
+      "exitTransfer": {"from":"Fukuoka","to":"FUK","label":"Fukuoka → FUK","mode":"train","fareTry":120,"durationMinutes":15,"dataQuality":"C","sourceName":"Fukuoka City Subway","priceLabel":"Resmî tarife / yaklaşık","bookingUrl":"https://subway.city.fukuoka.lg.jp/eng/"},
+      "edges": [
+        {"from":"Tokyo","to":"Kyoto","label":"Tokyo → Kyoto","mode":"high_speed_train","fareTry":3250,"durationMinutes":135,"dataQuality":"C","sourceName":"SmartEX","priceLabel":"Resmî tarife / yaklaşık","bookingUrl":"https://smart-ex.jp/en/index.php"},
+        {"from":"Tokyo","to":"Kyoto","label":"Tokyo → Kyoto gece otobüsü","mode":"night_bus","fareTry":1550,"durationMinutes":480,"nightService":true,"hotelNightSavedTry":1800,"dataQuality":"C","sourceName":"WILLER","priceLabel":"Yaklaşık","bookingUrl":"https://willer-travel.com/en/"},
+        {"from":"Kyoto","to":"Osaka","label":"Kyoto → Osaka","mode":"train","fareTry":320,"durationMinutes":30,"dataQuality":"C","sourceName":"JR West","priceLabel":"Resmî tarife / yaklaşık","bookingUrl":"https://www.westjr.co.jp/global/en/"},
+        {"from":"Osaka","to":"Beppu","label":"Osaka → Beppu gece feribotu","mode":"night_ferry","fareTry":4200,"durationMinutes":720,"nightService":true,"hotelNightSavedTry":1800,"dataQuality":"C","sourceName":"MOL Sunflower","priceLabel":"Resmî tarife / yaklaşık","bookingUrl":"https://www.ferry-sunflower.co.jp/en/"},
+        {"from":"Beppu","to":"Fukuoka","label":"Beppu → Fukuoka","mode":"bus","fareTry":850,"durationMinutes":150,"dataQuality":"C","sourceName":"Nishitetsu","priceLabel":"Resmî tarife / yaklaşık","bookingUrl":"https://www.nishitetsu.jp/en/"}
+      ],
+      "closedJawReturn": {"from":"Fukuoka","to":"Tokyo","label":"Fukuoka → Tokyo iç hat","mode":"domestic_flight","fareTry":2300,"baggageTry":700,"destinationAccessTry":450,"durationMinutes":190,"dataQuality":"C","sourceName":"İç hat low-cost","priceLabel":"Tahmini","bookingUrl":"https://www.google.com/travel/flights"}
+    },
+    {
+      "id": "uzbekistan_silk_road",
+      "label": "Özbekistan İpek Yolu",
+      "codes": ["TAS", "SKD"],
+      "days": [7, 11],
+      "entry": "TAS",
+      "exit": "UGC",
+      "entry_candidates": ["TAS"],
+      "exit_candidates": ["UGC"],
+      "startCity": "Taşkent",
+      "endCity": "Hive",
+      "cities": ["Semerkant", "Buhara"],
+      "stops": ["Taşkent", "Semerkant", "Buhara", "Hive"],
+      "preferred_modes": ["high_speed_train", "train", "night_train"],
+      "open_jaw": true,
+      "visaStatus": "ok",
+      "edges": [
+        {"from":"Taşkent","to":"Semerkant","label":"Taşkent → Semerkant","mode":"high_speed_train","fareTry":620,"durationMinutes":130,"dataQuality":"C","sourceName":"Uzbekistan Railways","priceLabel":"Resmî tarife / yaklaşık","bookingUrl":"https://eticket.railway.uz/en/home"},
+        {"from":"Semerkant","to":"Buhara","label":"Semerkant → Buhara","mode":"high_speed_train","fareTry":520,"durationMinutes":105,"dataQuality":"C","sourceName":"Uzbekistan Railways","priceLabel":"Resmî tarife / yaklaşık","bookingUrl":"https://eticket.railway.uz/en/home"},
+        {"from":"Buhara","to":"Hive","label":"Buhara → Hive gece treni","mode":"night_train","fareTry":690,"durationMinutes":430,"nightService":true,"hotelNightSavedTry":1200,"dataQuality":"C","sourceName":"Uzbekistan Railways","priceLabel":"Resmî tarife / yaklaşık","bookingUrl":"https://eticket.railway.uz/en/home"}
+      ],
+      "closedJawReturn": {"from":"Hive","to":"Taşkent","label":"Hive → Taşkent dönüşü","mode":"night_train","fareTry":950,"durationMinutes":840,"nightService":true,"hotelNightSavedTry":1200,"dataQuality":"C","sourceName":"Uzbekistan Railways","priceLabel":"Resmî tarife / yaklaşık","bookingUrl":"https://eticket.railway.uz/en/home"}
+    },
+    {
+      "id": "thailand_city_coast",
+      "label": "Tayland şehir + sahil",
+      "codes": ["BKK", "HKT"],
+      "days": [8, 12],
+      "entry": "BKK",
+      "exit": "HKT",
+      "entry_candidates": ["BKK"],
+      "exit_candidates": ["HKT"],
+      "startCity": "Bangkok",
+      "endCity": "Phuket",
+      "cities": ["Surat Thani"],
+      "stops": ["Bangkok", "Surat Thani", "Phuket"],
+      "preferred_modes": ["night_train", "bus", "domestic_flight"],
+      "open_jaw": true,
+      "visaStatus": "ok",
+      "edges": [
+        {"from":"Bangkok","to":"Surat Thani","label":"Bangkok → Surat Thani gece treni","mode":"night_train","fareTry":1250,"durationMinutes":690,"nightService":true,"hotelNightSavedTry":1300,"dataQuality":"C","sourceName":"SRT D-Ticket","priceLabel":"Resmî tarife / yaklaşık","bookingUrl":"https://www.dticket.railway.co.th/DTicketPublicWeb/home/Home"},
+        {"from":"Surat Thani","to":"Phuket","label":"Surat Thani → Phuket","mode":"bus","fareTry":580,"durationMinutes":270,"dataQuality":"C","sourceName":"Lomprayah","priceLabel":"Yaklaşık","bookingUrl":"https://www.lomprayah.com/"}
+      ],
+      "closedJawReturn": {"from":"Phuket","to":"Bangkok","label":"Phuket → Bangkok","mode":"domestic_flight","fareTry":1900,"baggageTry":650,"destinationAccessTry":350,"durationMinutes":150,"dataQuality":"C","sourceName":"İç hat low-cost","priceLabel":"Tahmini","bookingUrl":"https://www.google.com/travel/flights"}
+    }
+  ]
+}

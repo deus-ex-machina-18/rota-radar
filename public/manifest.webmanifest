@@ -1,0 +1,20 @@
+{
+  "name":"Rota Radar — Seyahat Fırsat Sistemi",
+  "short_name":"Rota Radar",
+  "description":"Gerçekten gidilebilir uçuş fırsatlarını izler.",
+  "id":"/",
+  "start_url":"/",
+  "scope":"/",
+  "display":"standalone",
+  "display_override":["standalone","minimal-ui"],
+  "orientation":"portrait-primary",
+  "background_color":"#061321",
+  "theme_color":"#07182d",
+  "lang":"tr",
+  "icons":[
+    {"src":"/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
+    {"src":"/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"},
+    {"src":"/maskable-512.png","sizes":"512x512","type":"image/png","purpose":"maskable"},
+    {"src":"/favicon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}
+  ]
+}
