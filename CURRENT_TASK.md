@@ -1,6 +1,6 @@
 # Güncel Durum
 
-Uygulama GitHub → Netlify sürekli dağıtımına hazırlanmıştır.
+Uygulama GitHub → Netlify sürekli dağıtımına hazırlanmış ve GitHub'a yüklenmiştir.
 
 Tamamlananlar:
 
@@ -10,10 +10,10 @@ Tamamlananlar:
 - Mevcut canlı sistemdeki 1 ve 3 kişilik kayıtlar başlangıç verisine aktarıldı.
 - SearchAPI anahtarı yalnız ortam değişkeninden okunuyor.
 - Netlify yapılandırması ve kurulum belgesi eklendi.
+- Kaynak kod `deus-ex-machina-18/rota-radar` deposunun `main` dalında yayınlandı.
 
 Sıradaki işlem:
 
-1. Kaynak kodu GitHub'daki `deus-ex-machina-18/rota-radar` deposuna gönder.
-2. Netlify'da depoyu seç.
-3. `SEARCHAPI_API_KEY` ortam değişkenini ekle.
-4. İlk deploy sonrası ana ekran, `/api/history?destination=ALL&adults=3` ve bilet kontrol akışını doğrula.
+1. Netlify'da `deus-ex-machina-18/rota-radar` deposunu seç.
+2. `SEARCHAPI_API_KEY` ortam değişkenini ekle.
+3. İlk deploy sonrası ana ekran, `/api/history?destination=ALL&adults=3` ve bilet kontrol akışını doğrula.
