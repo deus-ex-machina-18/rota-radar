@@ -25,6 +25,9 @@ export async function GET(request: Request) {
         source: "history" as const,
         visaSafe: catalog.visaSafe,
         tripPlan: deal.tripPlan ?? catalog.tripPlan,
+        entryNote: catalog.entryNote,
+        entrySourceUrl: catalog.entrySourceUrl,
+        riskNote: catalog.riskNote,
       };
       return [{ ...historyDeal, bookingPath: ticketCheckPath(historyDeal) }];
     });

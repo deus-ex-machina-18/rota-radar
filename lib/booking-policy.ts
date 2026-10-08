@@ -22,6 +22,7 @@ export function ticketCheckPath(deal: {
   departure: string;
   returnDate: string;
   totalPriceTry: number;
+  origin?: string;
 }) {
   const params = new URLSearchParams({
     destination: deal.destination,
@@ -30,5 +31,11 @@ export function ticketCheckPath(deal: {
     return: deal.returnDate,
     price: String(deal.totalPriceTry),
   });
+  if (deal.origin && ["ESB", "IST", "SAW"].includes(deal.origin)) params.set("origin", deal.origin);
   return `/api/book?${params.toString()}`;
+}
+
+export function routeSearchUrl(deal: { origin: string; destination: string; departure: string; returnDate: string; adults: number }) {
+  const query = `Google Flights ${deal.origin} to ${deal.destination} ${deal.departure} return ${deal.returnDate} ${deal.adults} adults round trip`;
+  return `https://www.google.com/search?${new URLSearchParams({ q: query }).toString()}`;
 }

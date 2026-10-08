@@ -718,3 +718,17 @@ body { background:#020b14; }
   .tracked-list .tracked-remove { grid-column:2; grid-row:1; align-self:start; }
   .tracked-list article>button:not(.tracked-remove) { grid-column:1/-1; }
 }
+
+/* Destination catalogue: ground transport and entry requirements. */
+.destination-notice,.ground-route-card { margin:0 0 1.25rem;padding:1.25rem;border:1px solid #cba45c55;border-radius:1rem;background:#152032;color:#eee8da; }
+.destination-notice { display:flex;gap:.75rem;align-items:flex-start; }
+.destination-notice>svg { flex-shrink:0;width:1.25rem;color:#dfbb74; }
+.destination-notice p,.ground-route-card p { margin:.5rem 0;color:#bcc5d2;line-height:1.6; }
+.destination-notice a,.ground-route-links a { display:inline-flex;gap:.5rem;align-items:center;color:#f2cf86; }
+.destination-notice a svg,.ground-route-links svg,.ground-track svg { width:1rem;height:1rem;flex-shrink:0; }
+.ground-route-card h3 { margin:.5rem 0;font-size:1.5rem;font-weight:800; }
+.ground-route-links { display:flex;flex-wrap:wrap;gap:.75rem;margin:1rem 0; }
+.ground-route-links a { padding:.8rem 1rem;border:1px solid #cba45c66;border-radius:.75rem;background:#223044; }
+.ground-route-card small { display:block;line-height:1.6;color:#aebaca; }
+.ground-track { display:flex;gap:.5rem;align-items:center;margin-top:1rem;color:#f2cf86; }
+.deal-entry-note { color:#f2cf86;font-size:.75rem;line-height:1.4; }

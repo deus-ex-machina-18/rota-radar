@@ -10,7 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --ignore-pattern .next --ignore-pattern dist",
-    "test:core": "node --experimental-strip-types scripts/check-core-regressions.mjs"
+    "test:core": "node --experimental-strip-types scripts/check-core-regressions.mjs",
+    "test:radar": "node tests/radar-flow.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

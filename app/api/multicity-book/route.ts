@@ -1,9 +1,9 @@
+import { validTravelDates } from "@/lib/search-window";
 import { createOpenJawBookingHandoff } from "@/lib/flight-monitor";
 import { hasSignificantPriceChange, trustedGoogleUrl } from "@/lib/booking-policy";
 
 export const dynamic = "force-dynamic";
 
-const isoDate = /^\d{4}-\d{2}-\d{2}$/;
 const airport = /^[A-Z]{3}$/;
 const escapeHtml = (value: string) => value
   .replaceAll("&", "&amp;")
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
   const returnDate = params.get("return") || "";
   const adults = Number(params.get("adults"));
   const oldPrice = Number(params.get("price"));
-  if (!["ESB", "IST", "SAW"].includes(origin) || !airport.test(entry) || !airport.test(exit) || !isoDate.test(departure) || !isoDate.test(returnDate) || ![1, 3].includes(adults) || !Number.isFinite(oldPrice) || oldPrice <= 0) {
+  if (!["ESB", "IST", "SAW"].includes(origin) || !airport.test(entry) || !airport.test(exit) || !validTravelDates(departure, returnDate) || ![1, 3].includes(adults) || !Number.isFinite(oldPrice) || oldPrice <= 0) {
     return new Response(page('<h1>Bağlantı geçersiz</h1><p>Rotayı uygulamadan yeniden oluştur.</p><div class="actions"><a class="secondary" href="/">Rota Radar’a dön</a></div>'), { status: 400, headers: { "content-type": "text/html; charset=utf-8" } });
   }
   try {
@@ -39,13 +39,13 @@ export async function GET(request: Request) {
     const hidden = result.booking?.postData
       ? [...new URLSearchParams(result.booking.postData)].map(([name, value]) => `<input type="hidden" name="${escapeHtml(name)}" value="${escapeHtml(value)}">`).join("")
       : "";
-    const actionHtml = action
+    const actionHtml = action && result.booking?.postData
       ? `<form method="post" action="${escapeHtml(action)}" target="_blank">${hidden}<button class="primary" type="submit">${priceChanged ? "Yeni fiyatla devam et" : `${seller} üzerinde devam et →`}</button></form>`
-      : '<a class="primary" href="https://www.google.com/travel/flights" target="_blank" rel="noopener noreferrer">Google Flights’ta aç →</a>';
+      : `<a class="primary" href="https://www.google.com/search?${escapeHtml(new URLSearchParams({ q: `Google Flights multi city ${origin} to ${entry} ${departure} ${exit} to ${origin} ${returnDate} ${adults} adults` }).toString())}" target="_blank" rel="noopener noreferrer">Rotayı Google’da kontrol et →</a>`;
     const priceNotice = priceChanged
       ? `<p>İlk gördüğün toplam fiyat <strong>${escapeHtml(oldFormatted)}</strong>, güncel toplam fiyat <strong>${escapeHtml(formatted)}</strong>.</p>`
       : `<p class="price">${escapeHtml(formatted)}</p>`;
-    return new Response(page(`<h1>${priceChanged ? "Fiyat değişti" : "Fiyat yeniden doğrulandı"}</h1><p class="route">${origin} → ${entry} / ${exit} → ${origin}</p>${priceNotice}<p>${adults} kişi toplamı · ödeme satıcı sayfasında tamamlanır.</p><div class="actions">${actionHtml}<a class="secondary" href="/">Rota Radar’a dön</a></div><p class="note">Fiyat ve koltuk müsaitliği satıcı ekranında son kez değişebilir.</p>`), { headers: { "content-type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
+    return new Response(page(`<h1>${priceChanged ? "Fiyat değişti" : "Fiyat yeniden doğrulandı"}</h1><p class="route">${origin} → ${entry} / ${exit} → ${origin}</p>${priceNotice}<p>${escapeHtml(departure)}–${escapeHtml(returnDate)} · ${adults} kişi toplamı · ödeme satıcı sayfasında tamamlanır.</p><div class="actions">${actionHtml}<a class="secondary" href="/">Rota Radar’a dön</a></div><p class="note">Fiyat ve koltuk müsaitliği satıcı ekranında son kez değişebilir.</p>`), { headers: { "content-type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
   } catch (error) {
     return new Response(page(`<h1>Fiyat doğrulanamadı</h1><p>${escapeHtml(error instanceof Error ? error.message : "Satın alma bağlantısı hazırlanamadı.")}</p><div class="actions"><a class="secondary" href="/">Rota Radar’a dön</a></div>`), { status: 503, headers: { "content-type": "text/html; charset=utf-8" } });
   }

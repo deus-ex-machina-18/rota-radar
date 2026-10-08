@@ -1,5 +1,6 @@
 import { searchOpenJawOptions, type Deal, type OpenJawFlightOption } from "@/lib/flight-monitor";
 import { matchesProfileEntry } from "@/lib/route-profile-policy";
+import { DESTINATIONS, isFlightDestination } from "@/lib/destination-catalog";
 import routeProfileData from "@/data/route-templates.json";
 import {
   DEFAULT_POLICY,
@@ -214,6 +215,11 @@ function baselineFor(
 }
 
 export async function buildOptimizedItinerary(deal: Deal): Promise<PlannedItinerary> {
+  const catalog = DESTINATIONS[deal.destination];
+  if (catalog && !isFlightDestination(catalog)) {
+    throw new Error("Bu rota için katalogdaki otobüs/tren bağlantılarını kullan.");
+  }
+  if (catalog) deal = { ...deal, visaSafe: catalog.visaSafe };
   const profile = profileFor(deal);
   const live = await searchOpenJawOptions({
     entry: profile.entry,
@@ -233,6 +239,8 @@ export async function buildOptimizedItinerary(deal: Deal): Promise<PlannedItiner
   const baselineCostTry = baseline.evaluation.trueCostTry;
   const comparison = compareToBaseline(selected.evaluation, baseline.evaluation);
   const warnings = [
+    ...(catalog?.entryNote ? [catalog.entryNote] : []),
+    ...(catalog?.riskNote ? [catalog.riskNote] : []),
     ...live.errors.slice(0, 2),
     ...(selected.flight.transitVisaRisk ? ["Aktarma havalimanı için transit vize kuralı ayrıca doğrulanmalı."] : []),
     ...(selected.evaluation.dataQuality === "C" ? ["Kara ulaşımı fiyatları resmî tarife/ortalama düzeyinde; ödeme anında doğrulanmalı."] : []),

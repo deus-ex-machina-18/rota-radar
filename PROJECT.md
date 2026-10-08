@@ -47,3 +47,17 @@ Katalog; Türkiye/Doğu Anadolu, Balkanlar, Kafkasya, Fas, Türk dünyası, Müs
 ## Bilinçli olarak ertelenenler
 
 Restoran rehberi, ayrıntılı gece hayatı verisi, geniş etkinlik kataloğu, sosyal oylama, ayrıntılı otel karşılaştırması ve oyunlaştırma; ulaşım çekirdeği gerçek kullanımla doğrulanana kadar ertelenmiştir.
+
+## 8 Ekim 2026 bakım güncellemesi
+
+Kanonik katalog `lib/destination-catalog.ts`: 75 uçuş, sekiz kara ulaşımı hedefi.
+Rusya otomatik önerilerden çıkarılmış, yalnız seçilerek taranır; giriş ve seyahat
+uyarıları gösterilir. Edirne ve diğer kara hedefleri uçuş sağlayıcısına gönderilmez.
+
+Takvim isteği en fazla yedi gidiş günü örnekler; dönüşümlü 6–12 ay ufku ve
+üç eşzamanlı rota sınırı kullanılır. Her sorgu 200 tarih kombinasyonunun altındadır.
+Netlify Blobs kayıtları fırsat yüzdesini korur; karşılaştırma medyanları seyahat
+ayına göre ayrılır. Geçmiş başlangıç verisi değiştirilmez; geçmiş gidişler elenir.
+Başarılı boş yanıt ve sağlayıcı hatası ayrıdır. Fiyat değişikliği otomatik satın alma
+yönlendirmesini durdurur. `pnpm test:radar` gerçek API handler/store kodunu
+kontrollü sağlayıcı ve Blobs yanıtlarıyla test eder.

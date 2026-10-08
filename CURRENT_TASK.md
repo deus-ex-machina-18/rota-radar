@@ -1,19 +1,17 @@
-# Güncel Durum
+# Current task — 2026-10-08
 
-Uygulama GitHub → Netlify sürekli dağıtımına hazırlanmış ve GitHub'a yüklenmiştir.
+Port the published radar fixes and 83-destination catalogue to the existing
+GitHub/Netlify source, retaining Next.js, runtime-env and Netlify Blobs.
 
-Tamamlananlar:
+Completed: ground/manual-only catalogue, rotating seven-day samples in months
+6–12, bounded route concurrency, saved savings/baselines by travel month, honest
+history/error/empty UI, origin/traveller-aware seller checks, changed-price
+confirmation and route-specific manual fallback. Existing source history and
+Netlify deployment configuration are retained.
 
-- Cloudflare Sites/Vinext bağımlılıkları kaldırıldı.
-- Standart Next.js komutlarına geçildi.
-- D1 fiyat geçmişi Netlify Blobs uyumlu depolamaya taşındı.
-- Mevcut canlı sistemdeki 1 ve 3 kişilik kayıtlar başlangıç verisine aktarıldı.
-- SearchAPI anahtarı yalnız ortam değişkeninden okunuyor.
-- Netlify yapılandırması ve kurulum belgesi eklendi.
-- Kaynak kod `deus-ex-machina-18/rota-radar` deposunun `main` dalında yayınlandı.
+Tests: core regressions and mocked radar/API/Blobs flow. These do not verify
+real provider quota, Netlify deployment or an actual seller checkout.
+No scheduled scans or Android push notifications have been added.
 
-Sıradaki işlem:
-
-1. Netlify'da `deus-ex-machina-18/rota-radar` deposunu seç.
-2. `SEARCHAPI_API_KEY` ortam değişkenini ekle.
-3. İlk deploy sonrası ana ekran, `/api/history?destination=ALL&adults=3` ve bilet kontrol akışını doğrula.
+Next: authenticated production provider and seller-flow verification, then
+scheduling the existing monitor with clear success/error reporting.

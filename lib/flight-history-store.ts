@@ -1,3 +1,4 @@
+import { istanbulDay } from "@/lib/search-window";
 import { getStore } from "@netlify/blobs";
 import seedHistory from "@/data/seed-history.json";
 import type { Deal } from "@/lib/flight-monitor";
@@ -5,6 +6,7 @@ import type { DailyCalendarBaseline, HistoricalCalendarBaseline } from "@/lib/pr
 
 type StoredBaseline = HistoricalCalendarBaseline & {
   observedAt: string;
+  travelMonth?: string;
 };
 
 export type MonitorRun = {
@@ -74,7 +76,7 @@ export async function readLatestDeals(adults: number, destinationCodes: string[]
     ...stored.flatMap((deals) => deals ?? []),
   ];
   const latest = new Map<string, Deal>();
-  for (const deal of candidates.sort((a, b) =>
+  for (const deal of candidates.filter(deal => deal.departure > istanbulDay()).sort((a, b) =>
     (b.observedAt ?? "").localeCompare(a.observedAt ?? "") ||
     a.perPersonTry - b.perPersonTry
   )) {
@@ -91,11 +93,12 @@ export async function readHistoricalBaselines(
   minNights: number,
   maxNights: number,
   beforeDay: string,
+  travelMonth: string,
 ) {
   const rows = await readJSON<StoredBaseline[]>(baselineKey(adults, destination)) ?? [];
   const cutoff = new Date(Date.now() - 30 * 86_400_000).toISOString();
   return rows.filter((row) =>
-    row.observedAt >= cutoff && row.observedDay < beforeDay &&
+    row.travelMonth === travelMonth && row.observedAt >= cutoff && row.observedDay < beforeDay &&
     row.nights >= minNights && row.nights <= maxNights
   ).slice(0, 240);
 }
@@ -105,12 +108,13 @@ export async function saveBaselines(
   adults: number,
   rows: DailyCalendarBaseline[],
   observedAt: string,
+  travelMonth: string,
 ) {
   const key = baselineKey(adults, destination);
   const existing = await readJSON<StoredBaseline[]>(key) ?? [];
   const observedDay = observedAt.slice(0, 10);
-  const merged = new Map(existing.map((row) => [`${row.nights}:${row.observedDay}`, row]));
-  for (const row of rows) merged.set(`${row.nights}:${observedDay}`, { ...row, observedDay, observedAt });
+  const merged = new Map(existing.map((row) => [`${row.travelMonth ?? ""}:${row.nights}:${row.observedDay}`, row]));
+  for (const row of rows) merged.set(`${travelMonth}:${row.nights}:${observedDay}`, { ...row, observedDay, observedAt, travelMonth });
   await writeJSON(key, [...merged.values()]
     .sort((a, b) => b.observedAt.localeCompare(a.observedAt))
     .slice(0, 365));

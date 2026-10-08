@@ -1,10 +1,10 @@
 import { createBookingHandoff, DESTINATIONS, type Deal } from "@/lib/flight-monitor";
-import { trustedGoogleUrl } from "@/lib/booking-policy";
+import { validTravelDates } from "@/lib/search-window";
+import { trustedGoogleUrl, routeSearchUrl } from "@/lib/booking-policy";
 import { flightSearchPolicy } from "@/lib/flight-search-policy";
 
 export const dynamic = "force-dynamic";
 
-const isoDate = /^\d{4}-\d{2}-\d{2}$/;
 const escapeHtml = (value: string) => value
   .replaceAll("&", "&amp;")
   .replaceAll("<", "&lt;")
@@ -22,8 +22,9 @@ export async function GET(request: Request) {
   const adults = Number(url.searchParams.get("adults"));
   const departure = url.searchParams.get("departure") || "";
   const returnDate = url.searchParams.get("return") || "";
+  const origin = url.searchParams.get("origin") || "ESB / IST / SAW";
   const oldPrice = Number(url.searchParams.get("price"));
-  if (!/^[A-Z]{3}$/.test(code) || ![1, 3].includes(adults) || !isoDate.test(departure) || !isoDate.test(returnDate) || !Number.isFinite(oldPrice) || oldPrice <= 0) {
+  if (!/^[A-Z]{3}$/.test(code) || ![1, 3].includes(adults) || !validTravelDates(departure, returnDate) || !["ESB", "IST", "SAW", "ESB / IST / SAW"].includes(origin) || !Number.isFinite(oldPrice) || oldPrice <= 0) {
     return new Response(page("Geçersiz bilet bağlantısı", "<h1>Bağlantı geçersiz</h1><p>Fırsatı uygulamadan yeniden açıp tekrar dene.</p><div class=\"actions\"><a class=\"secondary\" href=\"/\">Rota Radar’a dön</a></div>"), { status: 400, headers: { "content-type": "text/html; charset=utf-8" } });
   }
 
@@ -39,7 +40,7 @@ export async function GET(request: Request) {
     nights,
     totalPriceTry: Math.round(oldPrice),
     perPersonTry: Math.round(oldPrice / adults),
-    origin: "ESB / IST / SAW",
+    origin,
     visaSafe: destination?.visaSafe ?? false,
     stopPolicy: flightSearchPolicy(code).label,
     weatherNote: destination?.weatherNote ?? "Mevsim kontrolü gerekli",
@@ -53,18 +54,19 @@ export async function GET(request: Request) {
     const action = trustedGoogleUrl(handoff.url);
     const fallback = trustedGoogleUrl(handoff.fallbackUrl);
     if (!action || !handoff.postData) {
-      if (fallback) return Response.redirect(fallback, 302);
-      throw new Error("Satın alma bağlantısı bulunamadı");
+      const target = fallback ?? routeSearchUrl(deal);
+      return new Response(page("Satıcı bağlantısı doğrulanamadı", `<h1>Satıcı bağlantısı doğrulanamadı</h1><p>${escapeHtml(origin)} → ${escapeHtml(deal.city)} · ${escapeHtml(departure)}–${escapeHtml(returnDate)} · ${adults} kişi. Uçuş kontrolündeki toplam: ${escapeHtml(String(handoff.currentTotalPriceTry))} TL. Satıcı fiyatını ayrıca kontrol et.</p><div class="actions"><a class="primary" href="${escapeHtml(target)}" target="_blank" rel="noopener noreferrer">Rotayı Google’da kontrol et</a><a class="secondary" href="/">Rota Radar’a dön</a></div>`), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
     }
     const fields = [...new URLSearchParams(handoff.postData)].map(([name, value]) =>
       `<input type="hidden" name="${escapeHtml(name)}" value="${escapeHtml(value)}">`,
     ).join("");
     const oldLabel = new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 0 }).format(oldPrice);
     const newLabel = new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 0 }).format(handoff.currentTotalPriceTry);
-    const changed = handoff.verified.verificationStatus === "price_changed";
-    const body = changed
+    const changed = Math.round(oldPrice) !== handoff.currentTotalPriceTry;
+    const routeLabel = `<p>${escapeHtml(handoff.verified.origin)} → ${escapeHtml(deal.city)} · ${escapeHtml(departure)}–${escapeHtml(returnDate)} · ${adults} kişi</p>`;
+    const body = routeLabel + (changed
       ? `<h1>Fiyat değişti</h1><p>İlk gördüğün toplam fiyat <strong>${escapeHtml(oldLabel)}</strong>, güncel toplam fiyat <strong>${escapeHtml(newLabel)}</strong>. Devam edersen ${escapeHtml(handoff.seller ?? "satıcı")} sayfasına gideceksin.</p><form id="booking-form" method="post" action="${escapeHtml(action)}">${fields}<div class="actions"><button class="primary" type="submit">Yeni fiyatla devam et</button><a class="secondary" href="/">Vazgeç</a></div></form>`
-      : `<h1>Bilet yeniden doğrulandı</h1><p>${escapeHtml(handoff.seller ?? "Satıcı")} sayfasına yönlendiriliyorsun.</p><div class="price">${escapeHtml(newLabel)}</div><form id="booking-form" method="post" action="${escapeHtml(action)}">${fields}<div class="actions"><button class="primary" type="submit">Şimdi satıcıya git</button><a class="secondary" href="/">Vazgeç</a></div></form><p class="small">Satın alma işlemi Rota Radar’da yapılmaz; son fiyat ve koşullar satıcının sayfasında geçerlidir.</p>`;
+      : `<h1>Bilet yeniden doğrulandı</h1><p>${escapeHtml(handoff.seller ?? "Satıcı")} sayfasına yönlendiriliyorsun.</p><div class="price">${escapeHtml(newLabel)}</div><form id="booking-form" method="post" action="${escapeHtml(action)}">${fields}<div class="actions"><button class="primary" type="submit">Şimdi satıcıya git</button><a class="secondary" href="/">Vazgeç</a></div></form><p class="small">Satın alma işlemi Rota Radar’da yapılmaz; son fiyat ve koşullar satıcının sayfasında geçerlidir.</p>`);
     return new Response(page(changed ? "Fiyat değişti" : "Bilet doğrulandı", body, !changed), { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Bilet bağlantısı hazırlanamadı";
@@ -74,7 +76,7 @@ export async function GET(request: Request) {
     const explanation = providerLimited
       ? `Kartta gördüğün <strong>${escapeHtml(oldLabel)}</strong> toplam fiyat henüz yeniden doğrulanamadı. Bu fiyatı kesin kabul etmeden Google Flights üzerinde kontrol et.`
       : `${escapeHtml(message)} Kartta gördüğün toplam fiyat <strong>${escapeHtml(oldLabel)}</strong>.`;
-    const body = `<h1>${heading}</h1><p>${explanation}</p><div class="actions"><a class="primary" href="https://www.google.com/travel/flights" target="_blank" rel="noopener noreferrer">Google Flights’ta kontrol et</a><a class="secondary" href="/">Rota Radar’a dön</a></div><p class="small">Ödeme Rota Radar’da yapılmaz; geçerli fiyat ve koşullar satıcının ekranındadır.</p>`;
+    const body = `<h1>${heading}</h1><p>${explanation}</p><div class="actions"><a class="primary" href="${escapeHtml(routeSearchUrl(deal))}" target="_blank" rel="noopener noreferrer">Rotayı Google’da kontrol et</a><a class="secondary" href="/">Rota Radar’a dön</a></div><p class="small">Ödeme Rota Radar’da yapılmaz; geçerli fiyat ve koşullar satıcının ekranındadır.</p>`;
     return new Response(page(heading, body), { status: 503, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
   }
 }

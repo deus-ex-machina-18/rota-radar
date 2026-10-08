@@ -1,18 +1,16 @@
+import { DESTINATIONS, isFlightDestination, todayDestinationCodes, type Destination } from "@/lib/destination-catalog";
+export { DESTINATIONS, CORE_DESTINATION_CODES, todayDestinationCodes } from "@/lib/destination-catalog";
+import { radarWindow, settledWithLimit } from "@/lib/search-window";
+import { searchApiKey } from "@/lib/runtime-env";
+import { readHistoricalBaselines, saveBaselines, saveDeals, saveVerifiedDeal } from "@/lib/flight-history-store";
 import { chooseFlightOption, hasSeparateTicketRisk } from "@/lib/flight-option-selector";
 import { hasSignificantPriceChange, ticketCheckPath, trustedGoogleUrl } from "@/lib/booking-policy";
 import { flightSearchPolicy } from "@/lib/flight-search-policy";
-import {
-  readHistoricalBaselines,
-  saveBaselines,
-  saveDeals,
-  saveVerifiedDeal,
-} from "@/lib/flight-history-store";
 import {
   choosePriceBaseline,
   summarizeCalendarPrices,
   type CalendarPricePoint,
 } from "@/lib/price-baseline";
-import { searchApiKey } from "@/lib/runtime-env";
 
 export type Deal = {
   destination: string;
@@ -44,22 +42,11 @@ export type Deal = {
   googleFlightsUrl?: string;
   discoverySource?: "watchlist" | "world";
   tripPlan?: string;
+  entryNote?: string;
+  entrySourceUrl?: string;
+  riskNote?: string;
   verificationStatus?: "verified" | "price_changed" | "detail_unavailable";
   verifiedAt?: string;
-};
-
-export type Destination = {
-  city: string;
-  country: string;
-  code: string;
-  arrivalId?: string;
-  group: "Türkiye" | "Balkanlar" | "Kafkasya" | "Fas ve Kuzey Afrika" | "Türk dünyası" | "Müslüman Asya" | "Güney ve Güneydoğu Asya" | "Uzak rotalar";
-  minNights: number;
-  maxNights: number;
-  weekendOnly: boolean;
-  visaSafe: boolean;
-  weatherNote: string;
-  tripPlan: string;
 };
 
 export type OpenJawFlightOption = {
@@ -83,57 +70,6 @@ type ApiPayload = Record<string, unknown>;
 // SearchAPI'de 1 değeri ayrı bilet ve self-transfer sonuçlarını gizler.
 const HIDE_SEPARATE_TICKETS = "1";
 
-export const DESTINATIONS: Record<string, Destination> = {
-  TBS: { code: "TBS", city: "Tiflis", country: "Gürcistan", group: "Kafkasya", minNights: 2, maxNights: 3, weekendOnly: true, visaSafe: true, weatherNote: "Serin dönem · 0°C altı günler elenir", tripPlan: "2–3 gece şehir" },
-  GYD: { code: "GYD", city: "Bakü", country: "Azerbaycan", group: "Türk dünyası", minNights: 2, maxNights: 3, weekendOnly: true, visaSafe: true, weatherNote: "Kuvvetli rüzgâr günleri elenir", tripPlan: "2–3 gece şehir" },
-  VAS: { code: "VAS", city: "Sivas", country: "Türkiye", group: "Türkiye", minNights: 2, maxNights: 3, weekendOnly: true, visaSafe: true, weatherNote: "0°C altı günler elenir", tripPlan: "2–3 gece şehir" },
-  CMN: { code: "CMN", city: "Kazablanka", country: "Fas", group: "Fas ve Kuzey Afrika", minNights: 6, maxNights: 9, weekendOnly: false, visaSafe: true, weatherNote: "Ilıman dönem", tripPlan: "6–9 gün Fas rotası" },
-  RAK: { code: "RAK", city: "Marakeş", country: "Fas", group: "Fas ve Kuzey Afrika", minNights: 6, maxNights: 9, weekendOnly: false, visaSafe: true, weatherNote: "35°C üzeri günler elenir", tripPlan: "6–9 gün Fas rotası" },
-  FEZ: { code: "FEZ", city: "Fes", country: "Fas", group: "Fas ve Kuzey Afrika", minNights: 5, maxNights: 8, weekendOnly: false, visaSafe: true, weatherNote: "Aşırı sıcak günler elenir", tripPlan: "5–8 gün kültür rotası" },
-  RBA: { code: "RBA", city: "Rabat", country: "Fas", group: "Fas ve Kuzey Afrika", minNights: 5, maxNights: 8, weekendOnly: false, visaSafe: true, weatherNote: "Ilıman dönem", tripPlan: "5–8 gün şehir ve okyanus" },
-  AGA: { code: "AGA", city: "Agadir", country: "Fas", group: "Fas ve Kuzey Afrika", minNights: 6, maxNights: 9, weekendOnly: false, visaSafe: true, weatherNote: "Deniz sıcaklığı ayrıca doğrulanır", tripPlan: "6–9 gün sahil" },
-  TAS: { code: "TAS", city: "Taşkent", country: "Özbekistan", group: "Türk dünyası", minNights: 5, maxNights: 8, weekendOnly: false, visaSafe: true, weatherNote: "Aşırı sıcak günler elenir", tripPlan: "5–8 gün Özbekistan" },
-  SKD: { code: "SKD", city: "Semerkant", country: "Özbekistan", group: "Türk dünyası", minNights: 5, maxNights: 8, weekendOnly: false, visaSafe: true, weatherNote: "Aşırı sıcak günler elenir", tripPlan: "5–8 gün Semerkant–Buhara" },
-  ALA: { code: "ALA", city: "Almatı", country: "Kazakistan", group: "Türk dünyası", minNights: 5, maxNights: 8, weekendOnly: false, visaSafe: true, weatherNote: "0°C altı günler elenir", tripPlan: "5–8 gün şehir ve doğa" },
-  NQZ: { code: "NQZ", city: "Astana", country: "Kazakistan", group: "Türk dünyası", minNights: 4, maxNights: 7, weekendOnly: false, visaSafe: true, weatherNote: "Sert soğuk ve rüzgâr elenir", tripPlan: "4–7 gün şehir" },
-  FRU: { code: "FRU", city: "Bişkek", country: "Kırgızistan", group: "Türk dünyası", minNights: 5, maxNights: 8, weekendOnly: false, visaSafe: true, weatherNote: "0°C altı günler elenir", tripPlan: "5–8 gün Bişkek–Issık Göl" },
-  RMO: { code: "RMO", city: "Kişinev", country: "Moldova", group: "Türk dünyası", minNights: 3, maxNights: 5, weekendOnly: false, visaSafe: true, weatherNote: "0°C altı günler elenir", tripPlan: "3–5 gün Kişinev–Gagavuzya" },
-  ECN: { code: "ECN", city: "Lefkoşa", country: "KKTC", group: "Türk dünyası", minNights: 3, maxNights: 5, weekendOnly: false, visaSafe: true, weatherNote: "Deniz sıcaklığı ayrıca doğrulanır", tripPlan: "3–5 gün şehir ve sahil" },
-  SJJ: { code: "SJJ", city: "Saraybosna", country: "Bosna-Hersek", group: "Balkanlar", minNights: 2, maxNights: 3, weekendOnly: true, visaSafe: true, weatherNote: "0°C altı günler elenir", tripPlan: "2–3 gece şehir · Mostar ile 4–5 gün" },
-  SKP: { code: "SKP", city: "Üsküp", country: "Kuzey Makedonya", group: "Balkanlar", minNights: 2, maxNights: 3, weekendOnly: true, visaSafe: true, weatherNote: "0°C altı günler elenir", tripPlan: "2–3 gece şehir · Ohri ile 4–5 gün" },
-  OHD: { code: "OHD", city: "Ohri", country: "Kuzey Makedonya", group: "Balkanlar", minNights: 3, maxNights: 5, weekendOnly: false, visaSafe: true, weatherNote: "0°C altı günler elenir", tripPlan: "3–5 gün göl rotası" },
-  TIA: { code: "TIA", city: "Tiran", country: "Arnavutluk", group: "Balkanlar", minNights: 2, maxNights: 3, weekendOnly: true, visaSafe: true, weatherNote: "35°C üzeri günler elenir", tripPlan: "2–3 gece şehir · Berat/sahil ile 4–8 gün" },
-  PRN: { code: "PRN", city: "Priştine", country: "Kosova", group: "Balkanlar", minNights: 2, maxNights: 3, weekendOnly: true, visaSafe: true, weatherNote: "0°C altı günler elenir", tripPlan: "2–3 gece şehir · Prizren ile 3–4 gün" },
-  TGD: { code: "TGD", city: "Podgoritsa", country: "Karadağ", group: "Balkanlar", minNights: 3, maxNights: 5, weekendOnly: false, visaSafe: true, weatherNote: "Sahil sezonu ayrıca değerlendirilir", tripPlan: "3–5 gün Kotor–Budva" },
-  BEG: { code: "BEG", city: "Belgrad", country: "Sırbistan", group: "Balkanlar", minNights: 2, maxNights: 3, weekendOnly: true, visaSafe: true, weatherNote: "0°C altı günler elenir", tripPlan: "2–3 gece gece hayatı" },
-  TUN: { code: "TUN", city: "Tunis", country: "Tunus", group: "Fas ve Kuzey Afrika", minNights: 5, maxNights: 8, weekendOnly: false, visaSafe: true, weatherNote: "35°C üzeri günler elenir", tripPlan: "5–8 gün Tunis–Sidi Bou Said–Sousse" },
-  AMM: { code: "AMM", city: "Amman", country: "Ürdün", group: "Müslüman Asya", minNights: 6, maxNights: 8, weekendOnly: false, visaSafe: true, weatherNote: "Güvenlik ve aşırı sıcak ayrıca kontrol edilir", tripPlan: "6–8 gün Petra–Wadi Rum–Akabe" },
-  DOH: { code: "DOH", city: "Doha", country: "Katar", group: "Müslüman Asya", minNights: 2, maxNights: 4, weekendOnly: false, visaSafe: true, weatherNote: "35°C üzeri günler elenir", tripPlan: "2–4 günlük kısa rota" },
-  MCT: { code: "MCT", city: "Maskat", country: "Umman", group: "Müslüman Asya", minNights: 5, maxNights: 7, weekendOnly: false, visaSafe: false, weatherNote: "35°C üzeri günler elenir", tripPlan: "5–7 gün Maskat–Nizwa" },
-  KUL: { code: "KUL", city: "Kuala Lumpur", country: "Malezya", group: "Müslüman Asya", minNights: 8, maxNights: 12, weekendOnly: false, visaSafe: true, weatherNote: "Çok yüksek nem ve muson elenir", tripPlan: "8–12 gün KL–Penang–Langkawi" },
-  LGK: { code: "LGK", city: "Langkawi", country: "Malezya", group: "Müslüman Asya", minNights: 8, maxNights: 12, weekendOnly: false, visaSafe: true, weatherNote: "Deniz, nem ve muson birlikte kontrol edilir", tripPlan: "8–12 gün ada ve şehir" },
-  CGK: { code: "CGK", city: "Cakarta", country: "Endonezya", group: "Müslüman Asya", minNights: 9, maxNights: 14, weekendOnly: false, visaSafe: false, weatherNote: "Çok yüksek nem ve muson elenir", tripPlan: "9–14 gün Endonezya" },
-  YIA: { code: "YIA", city: "Yogyakarta", country: "Endonezya", group: "Müslüman Asya", minNights: 9, maxNights: 14, weekendOnly: false, visaSafe: false, weatherNote: "Çok yüksek nem ve muson elenir", tripPlan: "9–14 gün kültür rotası" },
-  LOP: { code: "LOP", city: "Lombok", country: "Endonezya", group: "Müslüman Asya", minNights: 9, maxNights: 14, weekendOnly: false, visaSafe: false, weatherNote: "Deniz, nem ve muson birlikte kontrol edilir", tripPlan: "9–14 gün deniz ve doğa" },
-  DPS: { code: "DPS", city: "Bali", country: "Endonezya", group: "Güney ve Güneydoğu Asya", minNights: 9, maxNights: 14, weekendOnly: false, visaSafe: false, weatherNote: "Deniz, nem ve muson birlikte kontrol edilir", tripPlan: "9–14 gün Bali–Lombok" },
-  BKK: { code: "BKK", city: "Bangkok", country: "Tayland", group: "Güney ve Güneydoğu Asya", minNights: 8, maxNights: 12, weekendOnly: false, visaSafe: true, weatherNote: "Çok yüksek nem ve muson elenir", tripPlan: "8–12 gün Bangkok–sahil" },
-  HKT: { code: "HKT", city: "Phuket", country: "Tayland", group: "Güney ve Güneydoğu Asya", minNights: 8, maxNights: 12, weekendOnly: false, visaSafe: true, weatherNote: "Deniz, nem ve muson birlikte kontrol edilir", tripPlan: "8–12 gün deniz ve gece hayatı" },
-  CMB: { code: "CMB", city: "Kolombo", country: "Sri Lanka", group: "Güney ve Güneydoğu Asya", minNights: 8, maxNights: 12, weekendOnly: false, visaSafe: false, weatherNote: "İki muson dönemi ayrı kontrol edilir", tripPlan: "8–12 gün Kolombo–Kandy–Galle" },
-  SIN: { code: "SIN", city: "Singapur", country: "Singapur", group: "Güney ve Güneydoğu Asya", minNights: 3, maxNights: 5, weekendOnly: false, visaSafe: true, weatherNote: "Yüksek nem uyarıyla gösterilir", tripPlan: "3–5 gün şehir veya aktarma" },
-  ZNZ: { code: "ZNZ", city: "Zanzibar", country: "Tanzanya", group: "Müslüman Asya", minNights: 7, maxNights: 10, weekendOnly: false, visaSafe: false, weatherNote: "Deniz, nem ve yağmur sezonu kontrol edilir", tripPlan: "7–10 gün ada" },
-  MRU: { code: "MRU", city: "Mauritius", country: "Mauritius", group: "Güney ve Güneydoğu Asya", minNights: 7, maxNights: 10, weekendOnly: false, visaSafe: true, weatherNote: "Deniz ve siklon dönemi kontrol edilir", tripPlan: "7–10 gün ada" },
-  TYO: { code: "TYO", arrivalId: "HND,NRT", city: "Tokyo", country: "Japonya", group: "Uzak rotalar", minNights: 8, maxNights: 14, weekendOnly: false, visaSafe: true, weatherNote: "Aşırı sıcak, tayfun ve sert soğuk elenir", tripPlan: "8–14 gün Tokyo–Kyoto–Osaka" },
-  KIX: { code: "KIX", city: "Osaka", country: "Japonya", group: "Uzak rotalar", minNights: 8, maxNights: 14, weekendOnly: false, visaSafe: true, weatherNote: "Aşırı sıcak, tayfun ve sert soğuk elenir", tripPlan: "8–14 gün Osaka–Kyoto–Tokyo" },
-  ICN: { code: "ICN", city: "Seul", country: "Güney Kore", group: "Uzak rotalar", minNights: 7, maxNights: 10, weekendOnly: false, visaSafe: false, weatherNote: "Sert soğuk ve yüksek nem elenir", tripPlan: "7–10 gün Seul–Busan" },
-  KSY: { code: "KSY", city: "Kars", country: "Türkiye", group: "Türkiye", minNights: 2, maxNights: 4, weekendOnly: false, visaSafe: true, weatherNote: "0°C altı günler elenir", tripPlan: "2–4 gün Kars–Ani" },
-  VAN: { code: "VAN", city: "Van", country: "Türkiye", group: "Türkiye", minNights: 3, maxNights: 5, weekendOnly: false, visaSafe: true, weatherNote: "0°C altı günler elenir", tripPlan: "3–5 gün Van–Tatvan" },
-  ERZ: { code: "ERZ", city: "Erzurum", country: "Türkiye", group: "Türkiye", minNights: 2, maxNights: 4, weekendOnly: false, visaSafe: true, weatherNote: "0°C altı günler elenir", tripPlan: "2–4 gün şehir ve doğa" },
-  IGD: { code: "IGD", city: "Iğdır", country: "Türkiye", group: "Türkiye", minNights: 3, maxNights: 5, weekendOnly: false, visaSafe: true, weatherNote: "0°C altı günler elenir", tripPlan: "3–5 gün Doğubayazıt rotası" },
-  ERC: { code: "ERC", city: "Erzincan", country: "Türkiye", group: "Türkiye", minNights: 2, maxNights: 4, weekendOnly: false, visaSafe: true, weatherNote: "0°C altı günler elenir", tripPlan: "2–4 gün şehir ve doğa" },
-  EZS: { code: "EZS", city: "Elazığ", country: "Türkiye", group: "Türkiye", minNights: 3, maxNights: 5, weekendOnly: false, visaSafe: true, weatherNote: "0°C altı günler elenir", tripPlan: "3–5 gün Elazığ–Tunceli" },
-};
-
-export const CORE_DESTINATION_CODES = ["TBS", "GYD", "VAS", "CMN", "TAS", "TYO", "KIX"];
 const EXCLUDED_NAMES = ["egypt", "mısır", "cairo", "kahire", "sharm", "hurghada", "mardin", "diyarbakır", "diyarbakir"];
 const HIGH_RISK_NAMES = ["afganistan", "afghanistan", "suriye", "syria", "yemen", "lübnan", "lebanon", "ukrayna", "ukraine", "israil", "israel", "filistin", "palestine", "sudan", "somali", "libya", "irak", "iraq", "iran", "rusya", "russia"];
 const EASY_ENTRY_COUNTRIES = [
@@ -153,46 +89,35 @@ const SHORT_TRIP_COUNTRIES = [
   "sırbistan", "serbia", "kktc", "northern cyprus", "katar", "qatar",
 ];
 
-export function todayDestinationCodes(date = new Date()) {
-  const rotating = Object.keys(DESTINATIONS).filter((code) => !CORE_DESTINATION_CODES.includes(code));
-  const day = Math.floor(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / 86_400_000);
-  const start = (day * 5) % rotating.length;
-  const extras = Array.from({ length: Math.min(5, rotating.length) }, (_, index) => rotating[(start + index) % rotating.length]);
-  return [...CORE_DESTINATION_CODES, ...extras];
-}
-
 const addDays = (date: Date, days: number) => {
   const result = new Date(date);
   result.setUTCDate(result.getUTCDate() + days);
   return result;
 };
 const iso = (date: Date) => date.toISOString().slice(0, 10);
-function nextFriday(date: Date) {
-  const result = new Date(date);
-  result.setUTCDate(result.getUTCDate() + ((5 - result.getUTCDay() + 7) % 7));
-  return result;
-}
 
 function isValidTrip(item: Record<string, unknown>, destination: Destination) {
   if (typeof item.departure !== "string" || typeof item.return !== "string") return false;
   const departure = new Date(`${item.departure}T12:00:00Z`);
   const returnDate = new Date(`${item.return}T12:00:00Z`);
   const nights = Math.round((returnDate.getTime() - departure.getTime()) / 86_400_000);
-  if (nights < destination.minNights || nights > destination.maxNights) return false;
+  if (!Number.isFinite(nights) || nights < destination.minNights || nights > destination.maxNights) return false;
   return !destination.weekendOnly ||
     ([5, 6].includes(departure.getUTCDay()) && [0, 1].includes(returnDate.getUTCDay()));
 }
 
 async function apiGet(params: URLSearchParams) {
-  const apiKey = searchApiKey();
-  if (!apiKey) throw new Error("Canlı fiyat bağlantısı etkin değil");
   const response = await fetch(`https://www.searchapi.io/api/v1/search?${params.toString()}`, {
+    signal: AbortSignal.timeout(30_000),
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${searchApiKey()}`,
       Accept: "application/json",
     },
   });
-  if (!response.ok) throw new Error(`Fiyat kaynağı HTTP ${response.status} döndürdü`);
+  if (!response.ok) {
+    const explanation = response.status === 429 ? "sorgu sınırına ulaşıldı" : [401, 403].includes(response.status) ? "erişim reddedildi" : "istek başarısız";
+    throw new Error(`Fiyat kaynağı HTTP ${response.status}: ${explanation}`);
+  }
   const payload = await response.json() as ApiPayload;
   if (payload.error) throw new Error("Fiyat kaynağı sorguyu reddetti");
   return payload;
@@ -238,6 +163,7 @@ async function recordAndScore(deals: Deal[], calendarPoints: CalendarPricePoint[
     minNights,
     maxNights,
     observedDay,
+    first.departure.slice(0, 7),
   );
   const scored = deals.map((deal) => {
     const baseline = choosePriceBaseline(deal.nights, dailyBaselines, historyRows);
@@ -245,14 +171,13 @@ async function recordAndScore(deals: Deal[], calendarPoints: CalendarPricePoint[
   });
   await Promise.all([
     saveDeals(scored),
-    saveBaselines(first.destination, first.adults, dailyBaselines, observedAt),
+    saveBaselines(first.destination, first.adults, dailyBaselines, observedAt, first.departure.slice(0, 7)),
   ]);
   return scored;
 }
 
 async function searchDestination(destination: Destination, adults: number) {
-  const start = nextFriday(addDays(new Date(), 180));
-  const end = addDays(start, 9);
+  const { start, end } = radarWindow();
   const searchPolicy = flightSearchPolicy(destination.code);
   const params = new URLSearchParams({
     engine: "google_flights_calendar",
@@ -279,7 +204,7 @@ async function searchDestination(destination: Destination, adults: number) {
     ? payload.calendar.filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object"))
     : [];
   const validRows = calendar.filter(
-    (item) => typeof item.price === "number" && isValidTrip(item, destination),
+    (item) => typeof item.price === "number" && Number.isFinite(item.price) && item.price > 0 && String(item.departure) >= iso(start) && String(item.departure) <= iso(end) && isValidTrip(item, destination),
   );
   const calendarPoints = validRows.map((item) => {
     const departure = new Date(`${String(item.departure)}T12:00:00Z`);
@@ -316,6 +241,9 @@ async function searchDestination(destination: Destination, adults: number) {
         stopPolicy: searchPolicy.label,
         weatherNote: destination.weatherNote,
         tripPlan: destination.tripPlan,
+        entryNote: destination.entryNote,
+        entrySourceUrl: destination.entrySourceUrl,
+        riskNote: destination.riskNote,
         discoverySource: "watchlist",
         reason: item.is_lowest_price
           ? "Takvimde en düşük fiyat"
@@ -473,7 +401,10 @@ async function resolveOpenJaw(
   const bookingPayload = await apiGet(bookingParams);
   const bookingOptions = Array.isArray(bookingPayload.booking_options)
     ? (bookingPayload.booking_options as Array<Record<string, unknown>>)
-      .filter((item) => !item.is_split_booking)
+      .filter((item) => {
+          const request = item.booking_request as Record<string, unknown> | undefined;
+          return !item.is_split_booking && request && typeof request.url === "string" && trustedGoogleUrl(request.url) && typeof request.post_data === "string" && request.post_data.length > 0;
+        })
       .sort((a, b) => Number(a.price ?? Number.MAX_SAFE_INTEGER) - Number(b.price ?? Number.MAX_SAFE_INTEGER))
     : [];
   const seller = bookingOptions[0];
@@ -545,7 +476,7 @@ async function resolveDealDetails(deal: Deal): Promise<BookingHandoff> {
   const base = new URLSearchParams({
     engine: "google_flights",
     flight_type: "round_trip",
-    departure_id: "ESB,IST,SAW",
+    departure_id: ["ESB", "IST", "SAW"].includes(deal.origin) ? deal.origin : "ESB,IST,SAW",
     arrival_id: arrivalId,
     outbound_date: deal.departure,
     return_date: deal.returnDate,
@@ -571,36 +502,33 @@ async function resolveDealDetails(deal: Deal): Promise<BookingHandoff> {
   const inbound = chooseFlightOption(returnPayload, "booking_token");
 
   const selectedOrigin = originFromOption(outbound) || "ESB,IST,SAW";
-  const bookingParams = new URLSearchParams({
-    engine: "google_flights",
-    flight_type: "round_trip",
-    departure_id: selectedOrigin,
-    arrival_id: arrivalId,
-    outbound_date: deal.departure,
-    return_date: deal.returnDate,
-    booking_token: String(inbound.booking_token),
-    currency: "TRY",
-    gl: "tr",
-    hl: "tr",
-  });
+  const bookingParams = new URLSearchParams(base);
+  bookingParams.set("departure_id", selectedOrigin);
+  bookingParams.set("booking_token", String(inbound.booking_token));
   const bookingPayload = await apiGet(bookingParams);
   const bookingOptions = Array.isArray(bookingPayload.booking_options)
     ? (bookingPayload.booking_options as Array<Record<string, unknown>>)
-        .filter((item) => !item.is_split_booking)
+        .filter((item) => {
+          const request = item.booking_request as Record<string, unknown> | undefined;
+          return !item.is_split_booking && request && typeof request.url === "string" && trustedGoogleUrl(request.url) && typeof request.post_data === "string" && request.post_data.length > 0;
+        })
         .sort((a, b) => Number(a.price ?? Number.MAX_SAFE_INTEGER) - Number(b.price ?? Number.MAX_SAFE_INTEGER))
     : [];
   const seller = bookingOptions[0];
   const bookingRequest = seller?.booking_request && typeof seller.booking_request === "object"
     ? seller.booking_request as Record<string, unknown>
     : undefined;
-  const detailedTotal = typeof inbound.price === "number"
+  const detailedTotal = typeof seller?.price === "number"
+    ? seller.price
+    : typeof inbound.price === "number"
     ? inbound.price
     : typeof outbound.price === "number"
       ? outbound.price
-      : deal.totalPriceTry;
+      : NaN;
+  if (!Number.isFinite(detailedTotal) || detailedTotal <= 0) throw new Error("Ayrıntılı uçuş fiyatı alınamadı");
   const verificationStatus = hasSignificantPriceChange(deal.totalPriceTry, Number(detailedTotal))
     ? "price_changed"
-    : "verified";
+    : seller ? "verified" : "detail_unavailable";
   const baggage = Array.isArray(seller?.baggage_prices)
     ? seller.baggage_prices.map(String).join(" · ")
     : undefined;
@@ -613,12 +541,12 @@ async function resolveDealDetails(deal: Deal): Promise<BookingHandoff> {
     seller: seller?.book_with ? String(seller.book_with) : undefined,
     baggage,
     googleFlightsUrl: googleRequestUrl(outboundPayload) ?? deal.googleFlightsUrl,
-    bookingPath: ticketCheckPath(deal),
+    bookingPath: ticketCheckPath({ ...deal, origin: selectedOrigin }),
     verificationStatus,
     verifiedAt: new Date().toISOString(),
     reason: verificationStatus === "verified"
-      ? `Ayrıntılı doğrulandı · %${deal.opportunityPct ?? 0} fırsat`
-      : "Ayrıntılı kontrolde fiyat değişti",
+      ? "Uçuş ve satıcı bağlantısı kontrol edildi"
+      : verificationStatus === "price_changed" ? "Ayrıntılı kontrolde fiyat değişti; karttaki fiyat eski kayıt" : "Uçuş bulundu; satıcı bağlantısı doğrulanamadı",
   };
   await saveVerifiedDeal(verified);
   return {
@@ -663,7 +591,6 @@ function trustedGoogleFlightsLink(value: unknown) {
 }
 
 async function recordDiscoveryDeals(deals: Deal[]) {
-  if (!deals.length) return;
   await saveDeals(deals);
 }
 
@@ -760,7 +687,7 @@ export async function discoverWorldDeals(adults: number, detailLimit = 1) {
       errors.push(error instanceof Error ? error.message : "Dünya fırsatı doğrulanamadı");
     }
   }
-  return { deals: unique.slice(0, 18), errors, destinationsFound: new Set(unique.map((deal) => deal.destination)).size };
+  return { deals: unique.slice(0, 18), errors, successfulOrigins: settled.filter(result => result.status === "fulfilled").length, destinationsFound: new Set(unique.map((deal) => deal.destination)).size };
 }
 
 export async function runScan(
@@ -771,10 +698,9 @@ export async function runScan(
   if (!searchApiKey()) throw new Error("Canlı fiyat bağlantısı etkin değil");
   const selected = destinationCodes
     .map((code) => DESTINATIONS[code])
-    .filter(Boolean);
-  const settled = await Promise.allSettled(
-    selected.map((destination) => searchDestination(destination, adults)),
-  );
+    .filter(isFlightDestination);
+  const settled = await settledWithLimit(selected, 3, (destination) => searchDestination(destination, adults));
+  const successfulDestinations = settled.filter(result => result.status === "fulfilled").length;
   const deals = settled.flatMap((result) => result.status === "fulfilled" ? result.value : []);
   const errors = settled
     .filter((result): result is PromiseRejectedResult => result.status === "rejected")
@@ -802,5 +728,7 @@ export async function runScan(
   return {
     deals: deals.sort((a, b) => a.perPersonTry - b.perPersonTry),
     errors,
+    successfulDestinations,
+    window: { start: iso(radarWindow().start), end: iso(radarWindow().end), scope: "sample" },
   };
 }

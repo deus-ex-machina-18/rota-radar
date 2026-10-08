@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight, BadgeCheck, Bell, Bus, CalendarDays, CheckCircle2, CircleAlert, Clock3, CloudSun,
   ChevronRight, Download, ExternalLink, Gauge, Heart, LoaderCircle, Luggage, MapPin, Navigation,
@@ -14,6 +14,7 @@ import { ticketCheckPath } from "@/lib/booking-policy";
 import { scoreLeg, type DataQuality } from "@/lib/transport-engine";
 import routeTemplateData from "@/data/route-templates.json";
 import transportSourceData from "@/data/transport-sources.json";
+import type { Destination } from "@/lib/destination-catalog";
 
 type Deal = {
   destination: string; city: string; country: string; adults: number;
@@ -29,16 +30,19 @@ type Deal = {
   discoverySource?: "watchlist" | "world"; tripPlan?: string;
   verificationStatus?: "verified" | "price_changed" | "detail_unavailable";
   verifiedAt?: string;
+  entryNote?: string; entrySourceUrl?: string; riskNote?: string;
 };
 
 type DestinationGroup = {
   name: string;
-  destinations: Array<{ code: string; city: string; country: string; tripPlan: string }>;
+  destinations: Destination[];
 };
 
 type DestinationCatalog = {
   groups: DestinationGroup[];
   catalogCount: number;
+  flightCount: number;
+  groundCount: number;
   todayWatchCount: number;
   coreCount: number;
   exclusions: string[];
@@ -104,6 +108,8 @@ function dealArtwork(deal: Deal) {
 
 function qualityForDeal(deal: Deal): DataQuality {
   const hasBooking = Boolean(deal.bookingPath || deal.googleFlightsUrl);
+  if (deal.source !== "live") return "D";
+  if (deal.verificationStatus === "price_changed") return "C";
   if (deal.verificationStatus === "verified" && hasBooking) return "A";
   if (deal.source === "live" && hasBooking) return "B";
   if (deal.source === "live") return "C";
@@ -144,6 +150,7 @@ function modeIcon(mode: string) {
 }
 
 export default function Home() {
+  const requestVersion = useRef(0);
   const [destination, setDestination] = useState("WORLD");
   const [adults, setAdults] = useState("3");
   const [deals, setDeals] = useState<Deal[]>(initialDeals);
@@ -214,18 +221,18 @@ export default function Home() {
     ...(catalog?.groups.flatMap((group) => group.destinations.map((item) => item.code)) ?? []),
   ], [catalog]);
 
-  const loadCachedDeals = useCallback(async (selectedDestination = "ALL", selectedAdults = Number(adults), afterLiveFailure = false) => {
+  const loadCachedDeals = useCallback(async (selectedDestination = "ALL", selectedAdults = Number(adults), failureMessage?: string, version = requestVersion.current) => {
     try {
       const historyDestination = ["ALL", "WORLD"].includes(selectedDestination) ? "ALL" : selectedDestination;
       const response = await fetch(`/api/history?destination=${encodeURIComponent(historyDestination)}&adults=${selectedAdults}`, { cache: "no-store" });
       const payload = await response.json() as { deals?: Deal[]; note?: string; error?: string };
-      if (!response.ok || !payload.deals?.length) return null;
+      if (!response.ok || !payload.deals?.length || version !== requestVersion.current) return null;
       setDeals(payload.deals);
       setDealFilter("all");
       setVisibleCount(12);
-      setCoverage({ checked: payload.deals.length, discovered: 0 });
-      setMessage(afterLiveFailure
-        ? `Canlı kaynak şu an sınırlı · ${payload.deals.length} son kayıt gösteriliyor`
+      setCoverage({ checked: 0, discovered: 0 });
+      setMessage(failureMessage
+        ? `${failureMessage} · ${payload.deals.length} eski kayıt gösteriliyor; bunlar canlı sonuç değil`
         : (payload.note ?? `${payload.deals.length} rotanın son kaydı gösteriliyor`));
       return payload.deals;
     } catch {
@@ -234,18 +241,39 @@ export default function Home() {
   }, [adults]);
 
   useEffect(() => {
-    queueMicrotask(() => void loadCachedDeals("ALL", Number(adults)));
+    const version = ++requestVersion.current;
+    queueMicrotask(() => {
+      if (version !== requestVersion.current) return;
+      setDeals([]);
+      setLoading(false);
+      setCoverage({ checked: 0, discovered: 0 });
+      setMessage("Kaydedilmiş fiyatlar yükleniyor…");
+      void loadCachedDeals("ALL", Number(adults), undefined, version).then(rows => {
+        if (!rows && version === requestVersion.current) setMessage("Bu yolcu sayısı için kayıt bulunamadı · canlı taramayla başla");
+      });
+    });
   }, [adults, loadCachedDeals]);
 
   const search = useCallback(async (forcedDestination?: string, forcedAdults?: number) => {
+    const version = ++requestVersion.current;
     const selectedDestination = forcedDestination ?? destination;
     const selectedAdults = forcedAdults ?? Number(adults);
+    const route = catalog?.groups.flatMap((group) => group.destinations).find((item) => item.code === selectedDestination);
+    if (route?.transportMode === "ground") {
+      setLoading(false);
+      setDestination(route.code);
+      setCoverage({ checked: 0, discovered: 0 });
+      setMessage(`${route.city}: otobüs/tren bağlantıları hazır. Fiyat ve ${selectedAdults} kişilik müsaitlik satıcıda kontrol edilir.`);
+      document.querySelector("#deals")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return { count: 0, deals: [] as Deal[] };
+    }
     setLoading(true);
     setMessage("Canlı fiyatlar taranıyor…");
     try {
       const response = await fetch(`/api/flights?destination=${encodeURIComponent(selectedDestination)}&adults=${selectedAdults}`, { cache: "no-store" });
       const payload = (await response.json()) as { deals?: Deal[]; error?: string; note?: string; details?: string[]; destinationsChecked?: number };
-      if (!response.ok || !payload.deals?.length) throw new Error(payload.details?.[0] ?? payload.error ?? "Bu aramada uygun sonuç bulunamadı.");
+      if (version !== requestVersion.current) return { count: 0, deals: [] as Deal[] };
+      if (!response.ok || !Array.isArray(payload.deals)) throw new Error(payload.error ?? payload.details?.[0] ?? "Canlı yanıt okunamadı.");
       setDeals(payload.deals);
       setDealFilter("all");
       setVisibleCount(8);
@@ -254,19 +282,22 @@ export default function Home() {
       document.querySelector("#deals")?.scrollIntoView({ behavior: "smooth", block: "start" });
       return { count: payload.deals.length, deals: payload.deals };
     } catch (error) {
-      const cachedDeals = await loadCachedDeals(selectedDestination, selectedAdults, true);
-      if (cachedDeals?.length) {
-        document.querySelector("#deals")?.scrollIntoView({ behavior: "smooth", block: "start" });
-        return { count: cachedDeals.length, deals: cachedDeals };
+      if (version !== requestVersion.current) throw error;
+      const failure = error instanceof Error ? error.message : "Canlı tarama tamamlanamadı.";
+      const cachedDeals = await loadCachedDeals(selectedDestination, selectedAdults, failure, version);
+      if (!cachedDeals?.length && version === requestVersion.current) {
+        setDeals([]);
+        setCoverage({ checked: 0, discovered: 0 });
+        setMessage(failure);
       }
-      setMessage(error instanceof Error ? error.message : "Canlı tarama tamamlanamadı.");
       throw error;
     } finally {
-      setLoading(false);
+      if (version === requestVersion.current) setLoading(false);
     }
-  }, [adults, destination, loadCachedDeals]);
+  }, [adults, catalog, destination, loadCachedDeals]);
 
   const runFullMonitor = useCallback(async () => {
+    const version = ++requestVersion.current;
     setMonitorLoading(true);
     setMessage("1 ve 3 kişilik rota havuzu taranıyor…");
     try {
@@ -277,15 +308,16 @@ export default function Home() {
         discoveredDestinations?: number; watchedDestinations?: number;
       };
       if (!response.ok) throw new Error(payload.error ?? "Toplu tarama tamamlanamadı.");
-      if (payload.deals?.length) setDeals(payload.deals);
+      if (version !== requestVersion.current) return payload;
+      setDeals(payload.deals ?? []);
       setDealFilter("all");
       setVisibleCount(8);
       setCoverage({ checked: payload.destinationsChecked ?? 0, discovered: payload.discoveredDestinations ?? 0 });
-      setMessage(`${payload.dealsFound ?? payload.deals?.length ?? 0} uçuş gösteriliyor · ${payload.strongDealsFound ?? payload.strongDeals?.length ?? 0} tanesi %20+ fırsat`);
+      setMessage(`${payload.dealsFound ?? payload.deals?.length ?? 0} uçuş gösteriliyor · ${payload.strongDealsFound ?? payload.strongDeals?.length ?? 0} tanesi %20+ doğrulanmış fırsat${payload.errorCount ? ` · ${payload.errorCount} kontrol tamamlanamadı` : ""}`);
       document.querySelector("#deals")?.scrollIntoView({ behavior: "smooth", block: "start" });
       return payload;
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Toplu tarama tamamlanamadı.");
+      if (version === requestVersion.current) setMessage(error instanceof Error ? error.message : "Toplu tarama tamamlanamadı.");
       throw error;
     } finally {
       setMonitorLoading(false);
@@ -346,10 +378,10 @@ export default function Home() {
     return () => lifecycle.abort();
   }, [buildItinerary, destinationValues, runFullMonitor, search]);
 
-  const routeDeals = useMemo(() => deals.filter((deal) => ["ALL", "WORLD"].includes(destination) || deal.destination === destination), [deals, destination]);
-  const strongCount = useMemo(() => routeDeals.filter((deal) => (deal.opportunityPct ?? 0) >= 20).length, [routeDeals]);
+  const routeDeals = useMemo(() => deals.filter((deal) => deal.adults === Number(adults) && (["ALL", "WORLD"].includes(destination) || deal.destination === destination)), [deals, destination, adults]);
+  const strongCount = useMemo(() => routeDeals.filter((deal) => (deal.opportunityPct ?? 0) >= 20 && deal.verificationStatus !== "price_changed").length, [routeDeals]);
   const filteredDeals = useMemo(() => {
-    const rows = dealFilter === "strong" ? routeDeals.filter((deal) => (deal.opportunityPct ?? 0) >= 20) : [...routeDeals];
+    const rows = dealFilter === "strong" ? routeDeals.filter((deal) => (deal.opportunityPct ?? 0) >= 20 && deal.verificationStatus !== "price_changed") : [...routeDeals];
     return rows.sort((a, b) => {
       if (sortMode === "price") return a.perPersonTry - b.perPersonTry;
       if (sortMode === "time") return (a.outboundDurationMinutes ?? Number.MAX_SAFE_INTEGER) - (b.outboundDurationMinutes ?? Number.MAX_SAFE_INTEGER);
@@ -357,12 +389,14 @@ export default function Home() {
     });
   }, [dealFilter, routeDeals, sortMode]);
   const shownDeals = filteredDeals.slice(0, visibleCount);
+  const selectedRoute = catalog?.groups.flatMap((group) => group.destinations).find((item) => item.code === destination);
+  const groundRoute = selectedRoute?.transportMode === "ground" ? selectedRoute : null;
   const trackedItems = trackedCodes.map((code) => {
     const deal = deals.find((item) => item.destination === code);
     const catalogItem = catalog?.groups.flatMap((group) => group.destinations).find((item) => item.code === code);
-    return { code, city: deal?.city ?? catalogItem?.city ?? code, country: deal?.country ?? catalogItem?.country ?? "", deal };
+    return { code, city: deal?.city ?? catalogItem?.city ?? code, country: deal?.country ?? catalogItem?.country ?? "", transportMode: catalogItem?.transportMode, deal };
   });
-  const routeCount = catalog?.catalogCount ?? 47;
+  const routeCount = catalog?.catalogCount ?? "…";
   const promptInstall = async () => {
     if (!installPrompt) return;
     setInstallHelpOpen(false);
@@ -431,12 +465,12 @@ export default function Home() {
               </Select>
             </label>
             <label className="traveler-field"><Users className="size-5" /><span className="sr-only">Yolcu sayısı</span><Select value={adults} onValueChange={(value) => setAdults(value ?? "3")}><SelectTrigger className="h-12 border-0 bg-transparent px-0 text-white shadow-none focus-visible:ring-0"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="1">1 kişi</SelectItem><SelectItem value="3">3 kişi</SelectItem></SelectContent></Select></label>
-            <Button className="scan-button" onClick={() => void search().catch(() => undefined)} disabled={loading}>{loading ? <LoaderCircle className="animate-spin" /> : <Radar />}<span>Canlı tara</span></Button>
+            <Button className="scan-button" onClick={() => void search().catch(() => undefined)} disabled={loading}>{loading ? <LoaderCircle className="animate-spin" /> : groundRoute ? <Bus /> : <Radar />}<span>{groundRoute ? "Ulaşımı aç" : "Canlı tara"}</span></Button>
           </div>
 
           <div className="hero-stats">
             <button type="button" onClick={() => setRoutesOpen((value) => !value)}><MapPin /><span><strong>{routeCount}</strong><small>rota</small></span></button>
-            <span><Sparkles /><span><strong>{routeDeals.length}</strong><small>yeni fırsat</small></span></span>
+            <span><Sparkles /><span><strong>{routeDeals.length}</strong><small>sonuç</small></span></span>
             <button type="button" onClick={() => { setDealFilter("strong"); document.querySelector("#deals")?.scrollIntoView({ behavior: "smooth" }); }}><Tag /><span><strong>%20+</strong><small>indirim</small></span></button>
           </div>
         </div>
@@ -444,18 +478,20 @@ export default function Home() {
 
       {routesOpen && catalog ? <section className="route-catalog mx-auto max-w-7xl px-4 sm:px-6" aria-label="Tüm rotalar">
         <div className="route-catalog-panel">
-          <div className="flex items-start justify-between gap-4"><div><h2>Tüm {catalog.catalogCount} rota</h2><p>Bir rotaya dokun; seçilen rota için canlı fiyat taraması başlasın.</p></div><button type="button" onClick={() => setRoutesOpen(false)}>Kapat</button></div>
-          <div className="route-groups">{catalog.groups.map((group) => <div key={group.name}><h3>{group.name}</h3><div>{group.destinations.map((item) => <button key={item.code} type="button" onClick={() => { setDestination(item.code); setRoutesOpen(false); void search(item.code, Number(adults)).catch(() => undefined); }}><strong>{item.city}</strong><span>{item.country}</span></button>)}</div></div>)}</div>
+          <div className="flex items-start justify-between gap-4"><div><h2>Tüm {catalog.catalogCount} rota</h2><p>{catalog.flightCount} uçuş destinasyonu · {catalog.groundCount} kara rotası. Uçuş için canlı tara; kara rotasında ulaşım bağlantılarını aç.</p></div><button type="button" onClick={() => setRoutesOpen(false)}>Kapat</button></div>
+          <div className="route-groups">{catalog.groups.map((group) => <div key={group.name}><h3>{group.name}</h3><div>{group.destinations.map((item) => <button key={item.code} type="button" onClick={() => { setDestination(item.code); setRoutesOpen(false); void search(item.code, Number(adults)).catch(() => undefined); }}><strong>{item.city}</strong><span>{item.transportMode === "ground" ? "Otobüs / tren" : item.manualOnly ? "Seçerek tara · e-vize" : item.country}</span></button>)}</div></div>)}</div>
         </div>
       </section> : null}
 
       <section id="deals" className="mx-auto max-w-5xl scroll-mt-24 px-5 py-7 sm:px-8 sm:py-10">
         <div className="showcase-section-head">
-          <div><h2>Bugünün fırsatları</h2><p aria-live="polite">{message}{coverage.checked ? ` · ${coverage.checked} rota kontrol edildi` : ""}</p></div>
+          <div><h2>{groundRoute ? `${groundRoute.city} ulaşımı` : "Bugünün fırsatları"}</h2><p aria-live="polite">{message}{coverage.checked ? ` · ${coverage.checked} rota kontrol edildi` : ""}</p></div>
           <button type="button" onClick={() => { setDealFilter("all"); setVisibleCount(Math.max(12, routeDeals.length)); }}>Tümünü gör <ChevronRight /></button>
         </div>
 
-        <div className="compact-toolbar">
+        {selectedRoute?.entryNote && !groundRoute ? <aside className="destination-notice"><ShieldCheck /><div><strong>{selectedRoute.city} · giriş koşulları</strong><p>{selectedRoute.entryNote}</p>{selectedRoute.riskNote ? <p>{selectedRoute.riskNote}</p> : null}{selectedRoute.entrySourceUrl ? <a href={selectedRoute.entrySourceUrl} target="_blank" rel="noopener noreferrer">Resmî giriş koşullarını kontrol et <ExternalLink /></a> : null}</div></aside> : null}
+        {groundRoute ? <article className="ground-route-card"><div className="dialog-kicker"><Bus /> Kara rotası · satış sayfasında doğrula</div><h3>{groundRoute.city}</h3><p>{groundRoute.tripPlan}</p><p>{groundRoute.entryNote}</p><div className="ground-route-links">{groundRoute.transportLinks?.map((link) => <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer">{link.label} <ExternalLink /></a>)}</div><small>Canlı fiyat ve {adults} kişilik koltuk müsaitliği burada doğrulanmadı. Tarihi, gidiş–dönüşü ve yolcu sayısını satış sayfasında seç.</small><button type="button" className="ground-track" onClick={() => toggleTracked(groundRoute.code)}><Heart />{trackedCodes.includes(groundRoute.code) ? "Takipten çıkar" : "Rotayı takip et"}</button></article> : null}
+        {!groundRoute ? <div className="compact-toolbar">
           <div className="filter-switch" aria-label="Sonuç filtresi">
             <button className={dealFilter === "all" ? "active" : ""} type="button" onClick={() => { setDealFilter("all"); setVisibleCount(8); }}>Tümü <span>{routeDeals.length}</span></button>
             <button className={dealFilter === "strong" ? "active" : ""} type="button" onClick={() => { setDealFilter("strong"); setVisibleCount(8); }}>%20+ <span>{strongCount}</span></button>
@@ -465,22 +501,24 @@ export default function Home() {
             <button className={sortMode === "price" ? "active" : ""} type="button" onClick={() => setSortMode("price")}>Fiyat</button>
             <button className={sortMode === "time" ? "active" : ""} type="button" onClick={() => setSortMode("time")}>Süre</button>
           </div>
-        </div>
+        </div> : null}
 
-        {shownDeals.length ? <div className="deal-grid">{shownDeals.map((deal, index) => {
-          const isStrong = (deal.opportunityPct ?? 0) >= 20;
+        {groundRoute ? null : shownDeals.length ? <div className="deal-grid">{shownDeals.map((deal, index) => {
+          const isStrong = (deal.opportunityPct ?? 0) >= 20 && deal.verificationStatus !== "price_changed";
           const ticketUrl = ticketUrlFor(deal);
           const quality = qualityForDeal(deal);
           const plannerKey = `${deal.destination}-${deal.departure}-${deal.returnDate}-${deal.adults}`;
           return <article key={`${deal.destination}-${deal.adults}-${deal.departure}-${deal.returnDate}-${deal.perPersonTry}`} className={`showcase-deal-card ${index === 0 ? "featured" : ""}`} style={{ backgroundImage: `url(${dealArtwork(deal)})` }}>
             <div className="showcase-card-shade" />
-            <div className="showcase-card-top"><div className="deal-badges"><span className={isStrong ? "opportunity strong" : "opportunity"}>{isStrong ? `%${deal.opportunityPct} FIRSAT` : deal.source === "live" ? "CANLI FİYAT" : deal.source === "history" ? "SON KAYIT" : "ÖRNEK FİYAT"}</span><span className={`quality-badge q${quality}`} title="Veri kalitesi">{quality}</span></div><div className="card-top-actions"><span className="weather"><CloudSun />{deal.weatherNote.split("·")[0]}</span><button className={trackedCodes.includes(deal.destination) ? "card-watch active" : "card-watch"} type="button" onClick={() => toggleTracked(deal.destination)} aria-label={trackedCodes.includes(deal.destination) ? `${deal.city} takibini kaldır` : `${deal.city} rotasını takip et`}><Heart /></button></div></div>
+            <div className="showcase-card-top"><div className="deal-badges"><span className={isStrong ? "opportunity strong" : "opportunity"}>{isStrong && deal.verificationStatus !== "price_changed" ? `${deal.source === "history" ? "KAYITTA " : ""}%${deal.opportunityPct} FIRSAT` : deal.verificationStatus === "price_changed" ? "FİYAT DEĞİŞTİ" : deal.source === "live" ? "CANLI FİYAT" : deal.source === "history" ? "SON KAYIT" : "ÖRNEK FİYAT"}</span><span className={`quality-badge q${quality}`} title="Veri kalitesi">{quality}</span></div><div className="card-top-actions"><span className="weather"><CloudSun />{deal.weatherNote.split("·")[0]}</span><button className={trackedCodes.includes(deal.destination) ? "card-watch active" : "card-watch"} type="button" onClick={() => toggleTracked(deal.destination)} aria-label={trackedCodes.includes(deal.destination) ? `${deal.city} takibini kaldır` : `${deal.city} rotasını takip et`}><Heart /></button></div></div>
             <div className="showcase-card-content">
               <span className="destination-code">{deal.destination}</span>
               <h3>{deal.city}</h3>
               <p className="card-route">{deal.origin === "ESB" ? "Ankara" : deal.origin} <ArrowRight /> {deal.city}</p>
               <div className="card-date"><CalendarDays /><div><strong>{shortDateLabel(deal.departure)} – {shortDateLabel(deal.returnDate)}</strong><span>{deal.nights} gece · {deal.adults} kişi</span></div></div>
               <div className="card-chips"><span><Plane />{deal.stopPolicy}</span><span><Luggage />{deal.baggage || "Bagaj satıcıda"}</span>{deal.source === "history" && deal.observedAt ? <span className="cached"><Clock3 />{checkedDateLabel(deal.observedAt)}</span> : deal.verificationStatus === "verified" ? <span className="verified"><BadgeCheck />Doğrulandı</span> : null}</div>
+              {deal.verificationStatus === "price_changed" ? <p className="deal-entry-note">Karttaki tutar eski fiyat; bilet kontrolünde güncel fiyat gösterilir.</p> : null}
+              {deal.riskNote || deal.entryNote ? <p className="deal-entry-note">{deal.riskNote ?? deal.entryNote}</p> : null}
               <div className="showcase-card-footer">
                 <div className="showcase-price"><strong>{money.format(deal.perPersonTry)}</strong><em>/ kişi</em><small>{money.format(deal.totalPriceTry)} toplam ({deal.adults} kişi)</small></div>
                 <div className="showcase-actions">
@@ -491,7 +529,7 @@ export default function Home() {
               </div>
             </div>
           </article>;
-        })}</div> : <div className="empty-state"><Tag /><h3>Bu filtrede güçlü fırsat yok.</h3><p>Tüm uçuşlar kaybolmadı. “Tüm sonuçlar” seçeneğine dönerek tamamını görebilirsin.</p><Button onClick={() => setDealFilter("all")}>Tüm sonuçları göster</Button></div>}
+        })}</div> : <div className="empty-state"><Tag /><h3>{routeDeals.length ? "Bu filtrede güçlü fırsat yok." : "Gösterilecek uçuş bulunamadı."}</h3><p>{routeDeals.length ? "Diğer fiyatlar için tüm sonuçları aç." : "Tarama durumu yukarıda. Başka bir rota seçerek yeniden tarayabilirsin."}</p>{routeDeals.length ? <Button onClick={() => setDealFilter("all")}>Tüm sonuçları göster</Button> : null}</div>}
 
         {shownDeals.length < filteredDeals.length ? <div className="show-more"><Button variant="outline" onClick={() => setVisibleCount((value) => value + 12)}>Daha fazla uçuş göster <span>{filteredDeals.length - shownDeals.length} sonuç kaldı</span></Button></div> : null}
 
@@ -558,7 +596,7 @@ export default function Home() {
       <Dialog open={watchOpen} onOpenChange={(open) => { setWatchOpen(open); if (!open) setActiveNav("discover"); }}>
         <DialogContent className="nav-dialog sm:max-w-lg">
           <DialogHeader><div className="dialog-kicker"><Heart /> Takip</div><DialogTitle>Takip edilen rotalar</DialogTitle><DialogDescription>Kalp simgesine bastığın şehirleri burada saklıyoruz. Her rotayı ayrı canlı tarayarak kredi tüketimini kontrol altında tutabilirsin.</DialogDescription></DialogHeader>
-          {trackedItems.length ? <div className="tracked-list">{trackedItems.map((item) => <article key={item.code}><div><strong>{item.city}</strong><span>{item.country || item.code}</span></div><button type="button" onClick={() => { setWatchOpen(false); setDestination(item.code); void search(item.code, Number(adults)).catch(() => undefined); }}>Canlı tara <Radar /></button><button className="tracked-remove" type="button" onClick={() => toggleTracked(item.code)} aria-label={`${item.city} takibini kaldır`}><Heart /></button></article>)}</div> : <div className="nav-empty"><Heart /><strong>Henüz takip edilen rota yok.</strong><span>Fırsat kartlarındaki kalbe dokunarak şehir ekleyebilirsin.</span></div>}
+          {trackedItems.length ? <div className="tracked-list">{trackedItems.map((item) => <article key={item.code}><div><strong>{item.city}</strong><span>{item.country || item.code}</span></div><button type="button" onClick={() => { setWatchOpen(false); setDestination(item.code); void search(item.code, Number(adults)).catch(() => undefined); }}>{item.transportMode === "ground" ? "Ulaşımı aç" : "Canlı tara"} <Radar /></button><button className="tracked-remove" type="button" onClick={() => toggleTracked(item.code)} aria-label={`${item.city} takibini kaldır`}><Heart /></button></article>)}</div> : <div className="nav-empty"><Heart /><strong>Henüz takip edilen rota yok.</strong><span>Fırsat kartlarındaki kalbe dokunarak şehir ekleyebilirsin.</span></div>}
         </DialogContent>
       </Dialog>
 

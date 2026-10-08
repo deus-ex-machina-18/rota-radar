@@ -4,7 +4,7 @@ Ankara, İstanbul ve Sabiha Gökçen çıkışlı uçuşları karşılaştıran;
 
 ## Özellikler
 
-- 47 destinasyonluk kişisel rota kataloğu
+- 83 destinasyonluk kişisel rota kataloğu
 - 1 veya 3 yolcu için canlı uçuş taraması
 - ESB / IST / SAW alternatif kalkış karşılaştırması
 - Fırsat yüzdesi, fiyat geçmişi ve canlı doğrulama durumu
@@ -31,6 +31,7 @@ Kontroller:
 
 ```bash
 pnpm test:core
+pnpm test:radar
 pnpm lint
 pnpm build
 ```
@@ -57,3 +58,16 @@ Netlify, Next.js App Router ve API route'larını otomatik olarak sunar. Fiyat g
 - `PROJECT.md`: ürün kapsamı ve teknik yapı
 - `CURRENT_TASK.md`: dağıtım durumu ve sıradaki işlem
 - `SEYAHAT_FIRSAT_PROJE_DEVIR_TESLIM.md`: ayrıntılı ürün geçmişi ve kararlar
+
+## 8 Ekim 2026 güncellemesi
+
+Edirne dahil sekiz kara ulaşımı rotası ve Rusya dahil 28 uçuş hedefi eklendi.
+Radar, 6–12 ay içindeki yedi günlük gidiş pencerelerini dönüşümlü örnekler; tek
+tarama bütün tarihleri kapsamaz. Eski kayıtlar canlı sonuç olarak gösterilmez.
+Bilet kontrolü yolcu sayısını ve kalkış havalimanını korur, fiyat değişince kullanıcı
+onayı bekler. Otomatik zamanlanmış taramalar ve Android bildirimleri henüz yoktur.
+
+Netlify sürümünde karşılaştırmalar seyahat ayına göre ayrılarak Blobs üzerinde
+saklanır; Cloudflare D1 migration dosyaları bu dağıtımda kullanılmaz.
+Kontrollü sağlayıcı yanıtlarıyla test edilmiştir; gerçek sağlayıcı fiyatı ve satıcı
+checkout akışı bu testlerin kapsamı dışındadır.
